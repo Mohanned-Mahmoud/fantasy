@@ -122,7 +122,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
             {pp.isCaptain && (
               <div
                 className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black z-20"
-                style={{ background: "#60a5fa", color: "#0f0f13" }}
+                style={{ background: "#2563eb", color: "#ffffff" }}
               >
                 C
               </div>
@@ -150,7 +150,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
                 onCaptainToggle(pp.player.id);
               }}
               className="text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity mt-1"
-              style={{ background: "rgba(96,165,250,0.2)", color: "#60a5fa", fontSize: "10px" }}
+              style={{ background: "#1d4ed8", color: "#ffffff", border: "1px solid #93c5fd", fontSize: "10px" }}
             >
               {pp.isCaptain ? "Captain ✓" : "Set C"}
             </button>
