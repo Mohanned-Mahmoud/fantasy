@@ -12,18 +12,26 @@ import firebase_admin
 from firebase_admin import credentials, auth as firebase_auth
 
 # التحقق مما إذا كان Firebase Admin قد تم تهيئته مسبقاً لمنع حدوث خطأ عند إعادة تشغيل السيرفر
+import firebase_admin
+from firebase_admin import credentials, auth as firebase_auth
+
 if not firebase_admin._apps:
-    # يفضل وضع مسار ملف الـ JSON الخاص بـ Firebase Service Account هنا
-    # يمكنك تحميله من إعدادات Firebase Console -> Service Accounts
-    cert_path = os.environ.get("FIREBASE_CERT_PATH", "firebase-adminsdk.json")
     try:
-        if os.path.exists(cert_path):
-            cred = credentials.Certificate(cert_path)
+        # 1. هنحاول نقرأ المفاتيح من متغيرات البيئة (عشان Back4App)
+        firebase_env = os.environ.get("FIREBASE_JSON_CREDS")
+        
+        if firebase_env:
+            cred_dict = json.loads(firebase_env)
+            cred = credentials.Certificate(cred_dict)
+            firebase_admin.initialize_app(cred)
+        # 2. لو ملقاش المتغير، هيدور على الملف المحلي (عشان جهازك)
+        elif os.path.exists("firebase-adminsdk.json"):
+            cred = credentials.Certificate("firebase-adminsdk.json")
             firebase_admin.initialize_app(cred)
         else:
             firebase_admin.initialize_app()
     except Exception as e:
-        print(f"Warning: Firebase initialization issue (Ignore if not using Google Login yet): {e}")
+        print(f"Firebase initialization error: {e}")
 # ------------------------
 
 from app.core.database import get_session
@@ -193,4 +201,3 @@ def login_with_firebase(
 @router.get("/me", response_model=UserRead)
 def me(current_user: User = Depends(get_current_user)):
     return current_user
-    

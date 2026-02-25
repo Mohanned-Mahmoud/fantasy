@@ -1,9 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  // التعديل هنا: توجيه الطلبات مباشرة لسيرفر الباك إند
-  baseURL: "http://127.0.0.1:8000/api",
-  headers: { "Content-Type": "application/json" },
+  baseURL: "https://fantasy5-rzj9663a.b4a.run/api",
 });
 
 api.interceptors.request.use((config) => {
