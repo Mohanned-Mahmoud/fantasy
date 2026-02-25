@@ -219,9 +219,27 @@ export default function SquadPage() {
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-sm truncate flex items-center gap-1">
+                            <div className="font-medium text-sm truncate flex items-center gap-2">
+                              {/* اسم اللاعب */}
                               {player.name}
-                              {isCap && <span className="text-xs px-1 rounded font-bold" style={{ background: "var(--primary)", color: "#0f0f13" }}>C</span>}
+
+                              {/* إطار المركز الصغير */}
+                              <span 
+                                className="text-[9px] px-1.5 py-0.5 rounded font-bold text-white uppercase tracking-wider"
+                                style={{ 
+                                  background: posColors[player.position] || "#6b7280",
+                                  border: "1px solid rgba(255,255,255,0.1)"
+                                }}
+                              >
+                                {player.position}
+                              </span>
+
+                              {/* علامة الكابتن لو موجودة */}
+                              {isCap && (
+                                <span className="text-xs px-1 rounded font-bold" style={{ background: "var(--primary)", color: "#0f0f13" }}>
+                                  C
+                                </span>
+                              )}
                             </div>
                             <div className="text-xs" style={{ color: "var(--muted)" }}>{player.team_name}</div>
                           </div>
