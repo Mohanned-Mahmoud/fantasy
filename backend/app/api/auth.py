@@ -18,20 +18,27 @@ from firebase_admin import credentials, auth as firebase_auth
 
 if not firebase_admin._apps:
     try:
-        # 1. هنحاول نقرأ المفاتيح من متغيرات البيئة (عشان Back4App)
+        # بنحاول نقرأ من Vercel Environment Variables
         firebase_env = os.environ.get("FIREBASE_JSON_CREDS")
         
         if firebase_env:
-            cred_dict = json.loads(firebase_env)
+            # هنا الكود كان بيضرب عشان مفيش import json
+            cred_dict = json.loads(firebase_env) 
             cred = credentials.Certificate(cred_dict)
             firebase_admin.initialize_app(cred)
-        # 2. لو ملقاش المتغير، هيدور على الملف المحلي (عشان جهازك)
+            print("Firebase initialized from Environment Variable")
+        
+        # لو شغال لوكال على جهازك
         elif os.path.exists("firebase-adminsdk.json"):
             cred = credentials.Certificate("firebase-adminsdk.json")
             firebase_admin.initialize_app(cred)
+            print("Firebase initialized from local JSON file")
+            
         else:
-            firebase_admin.initialize_app()
+            print("No Firebase credentials found!")
+            
     except Exception as e:
+        # دي الرسالة اللي شفناها في الـ Logs
         print(f"Firebase initialization error: {e}")
 # ------------------------
 
