@@ -1,0 +1,44 @@
+Act as an Expert Full-Stack Developer and System Architect. I am building a "Fantasy 5-a-side Football" web application for local matches, fully inspired by Fantasy Premier League (FPL) mechanics.
+
+Development Environment Context:
+I will be using the Replit Free tier strictly as my development IDE, not for production hosting. To ensure Replit runs smoothly during development without running out of memory:
+
+The frontend and backend should be modular but manageable within a single Replit workspace (or suggest the best Replit configuration for this).
+
+We MUST use an external, free cloud database (like Supabase or Neon Serverless Postgres) so we don't host the DB locally on Replit.
+
+Modern Technology Stack:
+
+Frontend: Next.js (App Router), React, TypeScript, Tailwind CSS, shadcn/ui.
+
+Backend: Python with FastAPI (ideal for fast execution of the points engine and scalable for future smart analytics/AI integrations).
+
+Database: PostgreSQL (hosted on Supabase or Neon) with SQLAlchemy or SQLModel in Python.
+
+Authentication: JWT-based auth via FastAPI, or Supabase Auth.
+
+Core Features & Fantasy Mechanics:
+
+Roles: Admin (manages real players, prices, and match stats) and Fantasy Manager (users).
+
+Squad Rules: Users select exactly 5 players (e.g., 1 GK, 2 DEF, 2 ATT) within a virtual budget (e.g., 50M). Prices are dynamic.
+
+Gameplay: 1 free transfer per matchweek (extra deducts points). Users must select a Captain (points x2).
+
+Points Engine: Robust Python logic to calculate points based on 5-a-side events (e.g., GK clean sheet = 5 pts, Goal = 4 pts, Assist = 3 pts, MVP = 3 pts, Nutmeg/Skill = 1 pt).
+
+Social: Global leaderboard and private Mini-leagues with join codes.
+
+UI/UX: Mobile-first, dark mode, vibrant sports aesthetic. Essential: A visual "Pitch View" component showing the user's 5 selected players positioned on a mini football field.
+
+Output Request:
+
+Detail the optimal Folder Structure for running Next.js and FastAPI together in Replit.
+
+Provide the PostgreSQL Database Schema (SQLModel/SQLAlchemy) for Users, Players, FantasyTeams, Gameweeks, and MatchStats.
+
+Write the FastAPI Python logic for the Points Calculation Engine.
+
+Provide the React/Tailwind code for the interactive "Pitch View" component.
+
+Provide the replit.nix or startup bash script needed to run both the Next.js dev server and the FastAPI uvicorn server simultaneously in Replit.

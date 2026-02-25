@@ -1,0 +1,14 @@
+node_modules/
+.next/
+__pycache__/
+*.pyc
+*.pyo
+*.db
+*.sqlite3
+.env
+.env.local
+.env.production
+*.egg-info/
+dist/
+build/
+.DS_Store
