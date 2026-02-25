@@ -152,7 +152,7 @@ export default function SquadPage() {
                     {captainId && (
                       <div className="flex justify-between text-sm">
                         <span style={{ color: "var(--muted)" }}>Captain</span>
-                        <span className="font-bold" style={{ color: "var(--primary)" }}>
+                        <span className="font-bold text-blue-400">
                           {selectedPlayers.find((p) => p.id === captainId)?.name || "None"}
                         </span>
                       </div>
