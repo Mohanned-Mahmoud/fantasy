@@ -35,3 +35,6 @@ def startup():
 @app.get("/api/health")
 def health():
     return {"status": "ok", "service": "Fantasy 5-a-side API"}
+@app.get("/")
+def read_root():
+    return {"status": "ok", "message": "Backend is running!"}

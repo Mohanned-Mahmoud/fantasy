@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlmodel import Session, select
 from pydantic import BaseModel, EmailStr
+import json  # تأكد إن السطر ده موجود ومكتوب صح
 
 # --- إعدادات Firebase ---
 import firebase_admin
