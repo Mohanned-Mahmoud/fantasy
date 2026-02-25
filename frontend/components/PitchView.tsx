@@ -85,7 +85,6 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
       </div>
 
       {positioned.map((pp, idx) => (
-        /* تم تغيير الزر الخارجي إلى div لمنع تداخل الأزرار */
         <div
           key={idx}
           onClick={() => {
@@ -95,25 +94,41 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
           style={{ top: pp.top, left: pp.left, zIndex: 10 }}
         >
           <div className="relative">
+            {/* التعديل الجوهري: إضافة الصورة الحقيقية للاعب */}
             <div
-              className="w-12 h-12 rounded-full flex items-center justify-center text-white font-bold text-xs shadow-lg border-2 transition-transform group-hover:scale-110"
+              className="w-14 h-14 rounded-full overflow-hidden shadow-lg border-2 transition-transform group-hover:scale-110 flex items-center justify-center bg-[#1a1a24]"
               style={{
-                background: posColors[pp.player.position.toUpperCase()] || "#6b7280",
                 borderColor: pp.isCaptain ? "#38ff7e" : "rgba(255,255,255,0.3)",
                 boxShadow: pp.isCaptain ? "0 0 12px rgba(56,255,126,0.6)" : undefined,
               }}
             >
-              {pp.player.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+              {pp.player.image_url ? (
+                <img 
+                  src={pp.player.image_url} 
+                  alt={pp.player.name} 
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    // في حال فشل تحميل الصورة يظهر بدلاً منها الحروف الأولى
+                    (e.target as HTMLImageElement).style.display = 'none';
+                  }}
+                />
+              ) : (
+                <span className="text-white font-bold text-xs">
+                  {pp.player.name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase()}
+                </span>
+              )}
             </div>
+            
             {pp.isCaptain && (
               <div
-                className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black"
+                className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black z-20"
                 style={{ background: "#38ff7e", color: "#0f0f13" }}
               >
                 C
               </div>
             )}
           </div>
+
           <div
             className="px-2 py-0.5 rounded text-xs font-semibold text-white max-w-[70px] truncate text-center"
             style={{ background: "rgba(0,0,0,0.75)", backdropFilter: "blur(4px)" }}
@@ -131,7 +146,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
             <button
               type="button"
               onClick={(e) => {
-                e.stopPropagation(); // منع انتقال الضغطة للـ div الخارجي
+                e.stopPropagation();
                 onCaptainToggle(pp.player.id);
               }}
               className="text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity mt-1"
