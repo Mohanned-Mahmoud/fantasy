@@ -36,7 +36,8 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const [newPlayer, setNewPlayer] = useState({ name: "", position: "GK", team_name: "", price: "5.0" });
+  // التعديل: أضفنا image_url هنا
+  const [newPlayer, setNewPlayer] = useState({ name: "", position: "GK", team_name: "", price: "5.0", image_url: "" });
   const [newGW, setNewGW] = useState({ number: "", name: "", deadline: "" });
   const [statGWId, setStatGWId] = useState("");
   const [statForm, setStatForm] = useState<StatForm>(defaultStatForm);
@@ -65,9 +66,14 @@ export default function AdminPage() {
   async function createPlayer() {
     if (!newPlayer.name || !newPlayer.team_name) { flash("Fill all fields", true); return; }
     try {
-      await api.post("/players/", { ...newPlayer, price: parseFloat(newPlayer.price) });
+      // التعديل: إرسال الـ image_url للباك إند
+      await api.post("/players/", { 
+        ...newPlayer, 
+        price: parseFloat(newPlayer.price),
+        image_url: newPlayer.image_url || "/players/default.png" 
+      });
       flash(`Player ${newPlayer.name} added!`);
-      setNewPlayer({ name: "", position: "GK", team_name: "", price: "5.0" });
+      setNewPlayer({ name: "", position: "GK", team_name: "", price: "5.0", image_url: "" });
       loadData();
     } catch (err: any) { flash(err.response?.data?.detail || "Failed", true); }
   }
@@ -161,6 +167,11 @@ export default function AdminPage() {
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Price (M)</label>
                         <input type="number" step="0.5" min="1" max="15" value={newPlayer.price} onChange={(e) => setNewPlayer((p) => ({ ...p, price: e.target.value }))} className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
                       </div>
+                      {/* التعديل: إضافة خانة رابط الصورة */}
+                      <div className="col-span-2">
+                        <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Image Path (e.g. /players/player.jpg)</label>
+                        <input value={newPlayer.image_url} onChange={(e) => setNewPlayer((p) => ({ ...p, image_url: e.target.value }))} placeholder="/players/messi.jpg" className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
+                      </div>
                     </div>
                     <button onClick={createPlayer} className="btn-primary w-full py-2 text-sm">Add Player</button>
                   </div>
@@ -170,6 +181,10 @@ export default function AdminPage() {
                     <div className="space-y-2 max-h-80 overflow-y-auto">
                       {players.map((p) => (
                         <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: "#1a1a24" }}>
+                          {/* التعديل: عرض صورة اللاعب المصغرة في القائمة */}
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-700">
+                             <img src={p.image_url || "/players/default.png"} alt="" className="w-full h-full object-cover" />
+                          </div>
                           <span className="text-xs px-2 py-0.5 rounded font-bold text-white w-10 text-center" style={{ background: { GK: "#f59e0b", DEF: "#3b82f6", MID: "#8b5cf6", ATT: "#ef4444" }[p.position] || "#6b7280" }}>{p.position}</span>
                           <span className="flex-1 text-sm font-medium">{p.name}</span>
                           <span className="text-xs" style={{ color: "var(--muted)" }}>{p.team_name}</span>

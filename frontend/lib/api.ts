@@ -43,6 +43,8 @@ export interface Player {
   price: number;
   total_points: number;
   is_active: boolean;
+  // السطر اللي جاي هو اللي هيحل الإيرور
+  image_url?: string; 
 }
 
 export interface Gameweek {

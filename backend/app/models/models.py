@@ -23,6 +23,7 @@ class Player(SQLModel, table=True):
     price: float = Field(default=5.0)
     total_points: int = Field(default=0)
     is_active: bool = Field(default=True)
+    image_url: Optional[str] = Field(default="/players/default.png")
 
     match_stats: List["MatchStat"] = Relationship(back_populates="player")
 

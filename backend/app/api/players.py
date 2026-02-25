@@ -9,14 +9,15 @@ from app.models.models import Player, User
 
 router = APIRouter(prefix="/api/players", tags=["players"])
 
-
+# 1. تعديل موديل الإنشاء ليستقبل رابط الصورة
 class PlayerCreate(BaseModel):
     name: str
     position: str
     team_name: str
     price: float = 5.0
+    image_url: Optional[str] = "/players/default.png" # القيمة الافتراضية لو مبعتش صورة
 
-
+# 2. تعديل موديل القراءة ليعرض رابط الصورة في الفرونت إند
 class PlayerRead(BaseModel):
     id: int
     name: str
@@ -25,17 +26,19 @@ class PlayerRead(BaseModel):
     price: float
     total_points: int
     is_active: bool
+    image_url: Optional[str] # أضفنا السطر ده هنا
 
     class Config:
         from_attributes = True
 
-
+# 3. تعديل موديل التحديث للسماح بتغيير الصورة لاحقاً
 class PlayerUpdate(BaseModel):
     name: Optional[str] = None
     position: Optional[str] = None
     team_name: Optional[str] = None
     price: Optional[float] = None
     is_active: Optional[bool] = None
+    image_url: Optional[str] = None # أضفنا السطر ده هنا
 
 
 @router.get("/", response_model=List[PlayerRead])
