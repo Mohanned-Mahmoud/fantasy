@@ -12,3 +12,4 @@ alembic
 httpx
 pydantic-settings
 pydantic[email]
+firebase-admin
