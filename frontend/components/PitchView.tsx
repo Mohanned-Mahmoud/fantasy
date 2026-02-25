@@ -98,8 +98,8 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
             <div
               className="w-14 h-14 rounded-full overflow-hidden shadow-lg border-2 transition-transform group-hover:scale-110 flex items-center justify-center bg-[#1a1a24]"
               style={{
-                borderColor: pp.isCaptain ? "#38ff7e" : "rgba(255,255,255,0.3)",
-                boxShadow: pp.isCaptain ? "0 0 12px rgba(56,255,126,0.6)" : undefined,
+                borderColor: pp.isCaptain ? "#60a5fa" : "rgba(255,255,255,0.3)",
+                boxShadow: pp.isCaptain ? "0 0 12px rgba(96,165,250,0.6)" : undefined,
               }}
             >
               {pp.player.image_url ? (
@@ -122,7 +122,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
             {pp.isCaptain && (
               <div
                 className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-xs font-black z-20"
-                style={{ background: "#38ff7e", color: "#0f0f13" }}
+                style={{ background: "#60a5fa", color: "#0f0f13" }}
               >
                 C
               </div>
@@ -150,7 +150,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
                 onCaptainToggle(pp.player.id);
               }}
               className="text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity mt-1"
-              style={{ background: "rgba(56,255,126,0.2)", color: "#38ff7e", fontSize: "10px" }}
+              style={{ background: "rgba(96,165,250,0.2)", color: "#60a5fa", fontSize: "10px" }}
             >
               {pp.isCaptain ? "Captain ✓" : "Set C"}
             </button>
