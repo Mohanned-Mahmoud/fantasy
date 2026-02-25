@@ -34,14 +34,13 @@ class MatchStatCreate(BaseModel):
     player_id: int
     goals: int = 0
     assists: int = 0
-    clean_sheet: bool = False
+    clean_sheet: int = 0
     saves: int = 0
-    yellow_cards: int = 0
-    red_card: bool = False
+    defensive_errors: int = 0 # اتعدلت هنا
     mvp: bool = False
     nutmegs: int = 0
     own_goals: int = 0
-    minutes_played: int = 45
+    minutes_played: int = 120
 
 
 class MatchStatRead(BaseModel):
@@ -49,10 +48,9 @@ class MatchStatRead(BaseModel):
     player_id: int
     goals: int
     assists: int
-    clean_sheet: bool
+    clean_sheet: int
     saves: int
-    yellow_cards: int
-    red_card: bool
+    defensive_errors: int
     mvp: bool
     nutmegs: int
     own_goals: int

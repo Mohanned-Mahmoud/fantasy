@@ -11,8 +11,7 @@ POINTS_CONFIG = {
         "assist": 3,
         "clean_sheet": 5,
         "save_per_3": 1,
-        "yellow_card": -1,
-        "red_card": -3,
+        "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
@@ -23,8 +22,7 @@ POINTS_CONFIG = {
         "assist": 3,
         "clean_sheet": 3,
         "save_per_3": 0,
-        "yellow_card": -1,
-        "red_card": -3,
+        "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
@@ -35,8 +33,7 @@ POINTS_CONFIG = {
         "assist": 3,
         "clean_sheet": 0,
         "save_per_3": 0,
-        "yellow_card": -1,
-        "red_card": -3,
+        "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
@@ -47,8 +44,7 @@ POINTS_CONFIG = {
         "assist": 3,
         "clean_sheet": 1,
         "save_per_3": 0,
-        "yellow_card": -1,
-        "red_card": -3,
+        "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
@@ -70,16 +66,14 @@ def calculate_player_points(stat: MatchStat, position: str) -> int:
     points += stat.goals * config["goal"]
     points += stat.assists * config["assist"]
 
-    if stat.clean_sheet and stat.minutes_played >= 45:
-        points += config["clean_sheet"]
+    if stat.clean_sheet > 0:
+        points += stat.clean_sheet * config["clean_sheet"]
 
     save_points = (stat.saves // 3) * config["save_per_3"]
     points += save_points
 
-    points += stat.yellow_cards * config["yellow_card"]
-
-    if stat.red_card:
-        points += config["red_card"]
+    # خصم نقط الأخطاء الدفاعية (فاول / لمسة يد)
+    points += stat.defensive_errors * config["defensive_error"]
 
     points += stat.own_goals * config["own_goal"]
 
@@ -137,19 +131,17 @@ def get_points_breakdown(stat: MatchStat, position: str) -> dict:
     if stat.assists > 0:
         breakdown[f"Assists ({stat.assists}x)"] = stat.assists * config["assist"]
 
-    if stat.clean_sheet and stat.minutes_played >= 45:
-        breakdown["Clean Sheet"] = config["clean_sheet"]
+    if stat.clean_sheet > 0:
+        breakdown[f"Clean Sheets ({stat.clean_sheet}x)"] = stat.clean_sheet * config["clean_sheet"]
 
     if stat.saves >= 3:
         save_pts = (stat.saves // 3) * config["save_per_3"]
         if save_pts:
             breakdown[f"Saves ({stat.saves})"] = save_pts
 
-    if stat.yellow_cards > 0:
-        breakdown[f"Yellow Card ({stat.yellow_cards}x)"] = stat.yellow_cards * config["yellow_card"]
-
-    if stat.red_card:
-        breakdown["Red Card"] = config["red_card"]
+    # تفاصيل الأخطاء الدفاعية
+    if stat.defensive_errors > 0:
+        breakdown[f"Defensive Error ({stat.defensive_errors}x)"] = stat.defensive_errors * config["defensive_error"]
 
     if stat.own_goals > 0:
         breakdown[f"Own Goals ({stat.own_goals}x)"] = stat.own_goals * config["own_goal"]

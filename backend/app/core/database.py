@@ -1,17 +1,21 @@
+import os
 from sqlmodel import SQLModel, create_engine, Session
-from app.core.config import settings
+from dotenv import load_dotenv
 
-engine = create_engine(
-    settings.DATABASE_URL,
-    connect_args={"check_same_thread": False} if "sqlite" in settings.DATABASE_URL else {},
-    echo=False,
-)
+# السطر ده هو اللي بيدور على ملف .env ويقرا اللي جواه
+load_dotenv()
 
+# هنا بيسحب اللينك من الـ env، ولو ملقاهوش هيضرب إيرور عشان ينبهك
+DATABASE_URL = os.getenv("DATABASE_URL")
 
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
+if not DATABASE_URL:
+    raise ValueError("DATABASE_URL is missing from .env file!")
 
+engine = create_engine(DATABASE_URL)
 
 def get_session():
     with Session(engine) as session:
         yield session
+
+def create_db_and_tables():
+    SQLModel.metadata.create_all(engine)

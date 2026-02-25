@@ -85,12 +85,13 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
       </div>
 
       {positioned.map((pp, idx) => (
-        <button
+        /* تم تغيير الزر الخارجي إلى div لمنع تداخل الأزرار */
+        <div
           key={idx}
           onClick={() => {
             if (onPlayerClick) onPlayerClick(pp.player);
           }}
-          className="absolute flex flex-col items-center gap-1 transform -translate-x-1/2 -translate-y-1/2 group"
+          className="absolute flex flex-col items-center gap-1 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer outline-none"
           style={{ top: pp.top, left: pp.left, zIndex: 10 }}
         >
           <div className="relative">
@@ -125,19 +126,21 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
           >
             {pp.label}
           </div>
+          
           {onCaptainToggle && (
             <button
+              type="button"
               onClick={(e) => {
-                e.stopPropagation();
+                e.stopPropagation(); // منع انتقال الضغطة للـ div الخارجي
                 onCaptainToggle(pp.player.id);
               }}
-              className="text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity"
+              className="text-xs px-1.5 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity mt-1"
               style={{ background: "rgba(56,255,126,0.2)", color: "#38ff7e", fontSize: "10px" }}
             >
               {pp.isCaptain ? "Captain ✓" : "Set C"}
             </button>
           )}
-        </button>
+        </div>
       ))}
 
       {players.length === 0 && (

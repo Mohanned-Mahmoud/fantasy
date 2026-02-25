@@ -46,10 +46,9 @@ class MatchStat(SQLModel, table=True):
 
     goals: int = Field(default=0)
     assists: int = Field(default=0)
-    clean_sheet: bool = Field(default=False)
+    clean_sheet: int = Field(default=0) # اتغيرت لرقم بدل bool
     saves: int = Field(default=0)
-    yellow_cards: int = Field(default=0)
-    red_card: bool = Field(default=False)
+    defensive_errors: int = Field(default=0)
     mvp: bool = Field(default=False)
     nutmegs: int = Field(default=0)
     own_goals: int = Field(default=0)

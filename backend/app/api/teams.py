@@ -100,10 +100,19 @@ def select_squad(
     positions = [p.position for p in players]
     gk_count = positions.count("GK")
     def_count = positions.count("DEF")
+    mid_count = positions.count("MID")
     att_count = positions.count("ATT")
 
-    if gk_count < 1:
-        raise HTTPException(status_code=400, detail="Must include at least 1 GK")
+    # ========== الشروط الجديدة للمراكز ==========
+    if gk_count != 1:
+        raise HTTPException(status_code=400, detail="Squad must have exactly 1 GK")
+    if not (1 <= def_count <= 3):
+        raise HTTPException(status_code=400, detail="You need 1 to 3 Defenders (DEF)")
+    if not (1 <= mid_count <= 3):
+        raise HTTPException(status_code=400, detail="You need 1 to 3 Midfielders (MID)")
+    if not (1 <= att_count <= 3):
+        raise HTTPException(status_code=400, detail="You need 1 to 3 Attackers (ATT)")
+    # ============================================
 
     total_cost = sum(p.price for p in players)
     team = session.exec(

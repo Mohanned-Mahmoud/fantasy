@@ -12,10 +12,9 @@ interface StatForm {
   player_id: string;
   goals: string;
   assists: string;
-  clean_sheet: boolean;
+  clean_sheet: string;
   saves: string;
-  yellow_cards: string;
-  red_card: boolean;
+  defensive_errors: string;
   mvp: boolean;
   nutmegs: string;
   own_goals: string;
@@ -23,8 +22,8 @@ interface StatForm {
 }
 
 const defaultStatForm: StatForm = {
-  player_id: "", goals: "0", assists: "0", clean_sheet: false, saves: "0",
-  yellow_cards: "0", red_card: false, mvp: false, nutmegs: "0", own_goals: "0", minutes_played: "45",
+  player_id: "", goals: "0", assists: "0", clean_sheet: "0", saves: "0",
+  defensive_errors: "0", mvp: false, nutmegs: "0", own_goals: "0", minutes_played: "120",
 };
 
 export default function AdminPage() {
@@ -98,10 +97,9 @@ export default function AdminPage() {
         player_id: parseInt(statForm.player_id),
         goals: parseInt(statForm.goals),
         assists: parseInt(statForm.assists),
-        clean_sheet: statForm.clean_sheet,
+        clean_sheet: parseInt(statForm.clean_sheet),
         saves: parseInt(statForm.saves),
-        yellow_cards: parseInt(statForm.yellow_cards),
-        red_card: statForm.red_card,
+        defensive_errors: parseInt(statForm.defensive_errors),
         mvp: statForm.mvp,
         nutmegs: parseInt(statForm.nutmegs),
         own_goals: parseInt(statForm.own_goals),
@@ -147,24 +145,24 @@ export default function AdminPage() {
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Name</label>
-                        <input value={newPlayer.name} onChange={(e) => setNewPlayer((p) => ({ ...p, name: e.target.value }))} placeholder="Player name" />
+                        <input value={newPlayer.name} onChange={(e) => setNewPlayer((p) => ({ ...p, name: e.target.value }))} placeholder="Player name" className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
                       </div>
                       <div>
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Position</label>
-                        <select value={newPlayer.position} onChange={(e) => setNewPlayer((p) => ({ ...p, position: e.target.value }))}>
+                        <select value={newPlayer.position} onChange={(e) => setNewPlayer((p) => ({ ...p, position: e.target.value }))} className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]">
                           {POSITIONS.map((pos) => <option key={pos} value={pos}>{pos}</option>)}
                         </select>
                       </div>
                       <div>
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Team Name</label>
-                        <input value={newPlayer.team_name} onChange={(e) => setNewPlayer((p) => ({ ...p, team_name: e.target.value }))} placeholder="Real team" />
+                        <input value={newPlayer.team_name} onChange={(e) => setNewPlayer((p) => ({ ...p, team_name: e.target.value }))} placeholder="Real team" className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
                       </div>
                       <div>
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Price (M)</label>
-                        <input type="number" step="0.5" min="1" max="15" value={newPlayer.price} onChange={(e) => setNewPlayer((p) => ({ ...p, price: e.target.value }))} />
+                        <input type="number" step="0.5" min="1" max="15" value={newPlayer.price} onChange={(e) => setNewPlayer((p) => ({ ...p, price: e.target.value }))} className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
                       </div>
                     </div>
-                    <button onClick={createPlayer} className="btn-primary py-2 text-sm">Add Player</button>
+                    <button onClick={createPlayer} className="btn-primary w-full py-2 text-sm">Add Player</button>
                   </div>
 
                   <div className="card p-4">
@@ -172,14 +170,13 @@ export default function AdminPage() {
                     <div className="space-y-2 max-h-80 overflow-y-auto">
                       {players.map((p) => (
                         <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: "#1a1a24" }}>
-                          <span className="text-xs px-2 py-0.5 rounded font-bold text-white" style={{ background: { GK: "#f59e0b", DEF: "#3b82f6", MID: "#8b5cf6", ATT: "#ef4444" }[p.position] || "#6b7280" }}>{p.position}</span>
+                          <span className="text-xs px-2 py-0.5 rounded font-bold text-white w-10 text-center" style={{ background: { GK: "#f59e0b", DEF: "#3b82f6", MID: "#8b5cf6", ATT: "#ef4444" }[p.position] || "#6b7280" }}>{p.position}</span>
                           <span className="flex-1 text-sm font-medium">{p.name}</span>
                           <span className="text-xs" style={{ color: "var(--muted)" }}>{p.team_name}</span>
                           <span className="text-sm font-bold text-yellow-400">£{p.price}M</span>
                           <span className="text-xs gradient-text font-bold">{p.total_points}pts</span>
                         </div>
                       ))}
-                      {players.length === 0 && <div className="text-center py-4 text-sm" style={{ color: "var(--muted)" }}>No players yet</div>}
                     </div>
                   </div>
                 </div>
@@ -192,18 +189,18 @@ export default function AdminPage() {
                     <div className="grid grid-cols-2 gap-3 mb-3">
                       <div>
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Number</label>
-                        <input type="number" value={newGW.number} onChange={(e) => setNewGW((g) => ({ ...g, number: e.target.value }))} placeholder="1" />
+                        <input type="number" value={newGW.number} onChange={(e) => setNewGW((g) => ({ ...g, number: e.target.value }))} placeholder="1" className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
                       </div>
                       <div>
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Name</label>
-                        <input value={newGW.name} onChange={(e) => setNewGW((g) => ({ ...g, name: e.target.value }))} placeholder="Gameweek 1" />
+                        <input value={newGW.name} onChange={(e) => setNewGW((g) => ({ ...g, name: e.target.value }))} placeholder="Gameweek 1" className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Deadline</label>
-                        <input type="datetime-local" value={newGW.deadline} onChange={(e) => setNewGW((g) => ({ ...g, deadline: e.target.value }))} />
+                        <input type="datetime-local" value={newGW.deadline} onChange={(e) => setNewGW((g) => ({ ...g, deadline: e.target.value }))} className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
                       </div>
                     </div>
-                    <button onClick={createGameweek} className="btn-primary py-2 text-sm">Create Gameweek</button>
+                    <button onClick={createGameweek} className="btn-primary w-full py-2 text-sm">Create Gameweek</button>
                   </div>
 
                   <div className="card p-4">
@@ -223,7 +220,6 @@ export default function AdminPage() {
                           )}
                         </div>
                       ))}
-                      {gameweeks.length === 0 && <div className="text-center py-4 text-sm" style={{ color: "var(--muted)" }}>No gameweeks yet</div>}
                     </div>
                   </div>
                 </div>
@@ -235,45 +231,41 @@ export default function AdminPage() {
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div>
                       <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Gameweek</label>
-                      <select value={statGWId} onChange={(e) => setStatGWId(e.target.value)}>
+                      <select value={statGWId} onChange={(e) => setStatGWId(e.target.value)} className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]">
                         <option value="">Select gameweek</option>
                         {gameweeks.map((gw) => <option key={gw.id} value={gw.id}>{gw.name}</option>)}
                       </select>
                     </div>
                     <div>
                       <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Player</label>
-                      <select value={statForm.player_id} onChange={(e) => setStatForm((f) => ({ ...f, player_id: e.target.value }))}>
+                      <select value={statForm.player_id} onChange={(e) => setStatForm((f) => ({ ...f, player_id: e.target.value }))} className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]">
                         <option value="">Select player</option>
                         {players.map((p) => <option key={p.id} value={p.id}>{p.name} ({p.position})</option>)}
                       </select>
                     </div>
                     {[
                       { key: "goals", label: "Goals" }, { key: "assists", label: "Assists" },
-                      { key: "saves", label: "Saves" }, { key: "yellow_cards", label: "Yellow Cards" },
+                      { key: "clean_sheet", label: "Clean Sheets (15m Games)" },
+                      { key: "saves", label: "Saves" },
+                      { key: "defensive_errors", label: "Defensive Errors (Fouls/Handball)" },
                       { key: "nutmegs", label: "Nutmegs/Skills" }, { key: "own_goals", label: "Own Goals" },
                       { key: "minutes_played", label: "Minutes Played" },
                     ].map(({ key, label }) => (
                       <div key={key}>
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>{label}</label>
                         <input type="number" min="0" value={(statForm as any)[key]}
-                          onChange={(e) => setStatForm((f) => ({ ...f, [key]: e.target.value }))} />
+                          onChange={(e) => setStatForm((f) => ({ ...f, [key]: e.target.value }))} className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
                       </div>
                     ))}
                   </div>
 
                   <div className="flex flex-wrap gap-4 mb-4">
-                    {[
-                      { key: "clean_sheet", label: "Clean Sheet" },
-                      { key: "red_card", label: "Red Card" },
-                      { key: "mvp", label: "MVP" },
-                    ].map(({ key, label }) => (
-                      <label key={key} className="flex items-center gap-2 cursor-pointer text-sm">
-                        <input type="checkbox" checked={(statForm as any)[key]}
-                          onChange={(e) => setStatForm((f) => ({ ...f, [key]: e.target.checked }))}
-                          className="w-4 h-4 accent-green-400" />
-                        {label}
-                      </label>
-                    ))}
+                    <label className="flex items-center gap-2 cursor-pointer text-sm">
+                      <input type="checkbox" checked={statForm.mvp}
+                        onChange={(e) => setStatForm((f) => ({ ...f, mvp: e.target.checked }))}
+                        className="w-4 h-4 accent-green-400" />
+                      MVP Award
+                    </label>
                   </div>
 
                   <button onClick={submitStat} className="btn-primary py-2.5 text-sm w-full">
