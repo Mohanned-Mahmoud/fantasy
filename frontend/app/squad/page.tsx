@@ -206,12 +206,18 @@ export default function SquadPage() {
                           }}
                           onClick={() => togglePlayer(player)}
                         >
+                          {/* التعديل هنا: عرض صورة اللاعب بدلاً من الدائرة الملونة فقط */}
                           <div
-                            className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold flex-shrink-0"
+                            className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 overflow-hidden border border-white/10"
                             style={{ background: posColors[player.position] || "#6b7280" }}
                           >
-                            {player.position}
+                            {player.image_url ? (
+                                <img src={player.image_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                                <span>{player.position}</span>
+                            )}
                           </div>
+
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm truncate flex items-center gap-1">
                               {player.name}
