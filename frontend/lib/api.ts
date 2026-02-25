@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://fantasy5-rzj9663a.b4a.run/api",
+  baseURL: "https://fantasy-ruby.vercel.app/api",
 });
 
 api.interceptors.request.use((config) => {
