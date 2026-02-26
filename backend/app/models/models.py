@@ -62,6 +62,10 @@ class MatchStat(SQLModel, table=True):
     player: Optional[Player] = Relationship(back_populates="match_stats")
     gameweek: Optional[Gameweek] = Relationship(back_populates="match_stats")
 
+class SystemSettings(SQLModel, table=True):
+    id: Optional[int] = Field(default=1, primary_key=True)
+    show_dashboard_stats: bool = Field(default=False)
+
 
 class FantasyTeam(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

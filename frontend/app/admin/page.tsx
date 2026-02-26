@@ -124,9 +124,10 @@ function StatCell({
 export default function AdminPage() {
   const router = useRouter();
   const user = getUser();
-  const [activeTab, setActiveTab] = useState<"players" | "gameweeks" | "stats">("players");
+  const [activeTab, setActiveTab] = useState<"players" | "gameweeks" | "stats" | "settings">("players");
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameweeks, setGameweeks] = useState<Gameweek[]>([]);
+  const [showStats, setShowStats] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -152,9 +153,15 @@ export default function AdminPage() {
   async function loadData() {
     setLoading(true);
     try {
-      const [pRes, gRes] = await Promise.all([api.get("/players/"), api.get("/gameweeks/")]);
+      const [pRes, gRes, settingsRes] = await Promise.all([
+        api.get("/players/"), 
+        api.get("/gameweeks/"),
+        api.get("/stats/settings").catch(() => ({ data: { show_dashboard_stats: false } }))
+      ]);
       setPlayers(pRes.data);
       setGameweeks(gRes.data);
+      setShowStats(settingsRes.data?.show_dashboard_stats || false);
+      
       const openGWs = gRes.data.filter((gw: Gameweek) => !gw.is_finished);
       const activeOpen = openGWs.find((gw: Gameweek) => gw.is_active) || openGWs[0];
       if (activeOpen) setStatGWId((prev) => prev || String(activeOpen.id));
@@ -205,6 +212,17 @@ export default function AdminPage() {
     } catch (err: any) { flash(err.response?.data?.detail || "Failed to calculate points", true); }
   }
 
+  async function toggleDashboardStats() {
+    try {
+      const newVal = !showStats;
+      await api.put(`/stats/settings?show_stats=${newVal}`);
+      setShowStats(newVal);
+      flash(newVal ? "Stats are now VISIBLE to users" : "Stats are HIDDEN from users");
+    } catch (err) {
+      flash("Failed to update settings", true);
+    }
+  }
+
   // Stats queue logic
   const queuePlayers = players.filter(p =>
     p.name.toLowerCase().includes(playerSearch.toLowerCase())
@@ -240,7 +258,7 @@ export default function AdminPage() {
     setSavingStat(true);
     try {
       const payload = {
-        player_id: currentPlayer.id, // <---- تم حل مشكلة التايب سكريبت هنا
+        player_id: currentPlayer.id, 
         ...Object.fromEntries(STAT_FIELDS.map(f => [f.key, currentData.stats[f.key] || 0])),
         mvp: currentData.mvp,
       };
@@ -268,7 +286,7 @@ export default function AdminPage() {
 
   const pts = calcPoints(currentData.stats, currentData.mvp);
   const activeGW = gameweeks.find(g => String(g.id) === statGWId);
-  const tabs = ["players", "gameweeks", "stats"] as const;
+  const tabs = ["players", "gameweeks", "stats", "settings"] as const;
 
   const inputStyle: React.CSSProperties = {
     width: "100%", padding: "8px", borderRadius: 8,
@@ -603,6 +621,33 @@ export default function AdminPage() {
                       {players.length === 0 ? "No players loaded." : "No players match your search."}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* ── SETTINGS TAB ── */}
+              {activeTab === "settings" && (
+                <div className="card p-4">
+                  <h2 className="font-semibold mb-4">Dashboard Features</h2>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1a1a24", padding: "16px", borderRadius: "12px", border: "1px solid #2a2a3a" }}>
+                    <div>
+                      <div style={{ fontWeight: "bold", fontSize: "15px" }}>Show Highlights Stats</div>
+                      <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: "4px" }}>
+                        Displays "Most Owned" and "Top Scorers" widgets on user dashboards.
+                      </div>
+                    </div>
+                    <button 
+                      onClick={toggleDashboardStats}
+                      style={{
+                        padding: "8px 16px", borderRadius: "8px", fontWeight: "bold", fontSize: "13px",
+                        background: showStats ? "rgba(239,68,68,0.1)" : "rgba(56,255,126,0.1)",
+                        color: showStats ? "#ef4444" : "var(--primary)",
+                        border: `1px solid ${showStats ? "rgba(239,68,68,0.2)" : "rgba(56,255,126,0.2)"}`,
+                        cursor: "pointer"
+                      }}
+                    >
+                      {showStats ? "Disable" : "Enable"}
+                    </button>
+                  </div>
                 </div>
               )}
             </>

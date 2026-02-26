@@ -26,6 +26,7 @@ export default function DashboardPage() {
   const [activeGW, setActiveGW] = useState<Gameweek | null>(null);
   const [teamGW, setTeamGW] = useState<TeamGW | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
+  const [highlights, setHighlights] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -38,17 +39,19 @@ export default function DashboardPage() {
 
   async function loadData() {
     try {
-      // التعديل هنا: هنجيب الـ history بتاع تشكيلاتك عشان لو الجولة قفلت نقرأ منه
-      const [teamRes, gwRes, playersRes, historyRes] = await Promise.all([
+      // التعديل هنا: هنجيب الـ history بتاع تشكيلاتك ونجيب الـ highlights للداش بورد
+      const [teamRes, gwRes, playersRes, historyRes, highlightsRes] = await Promise.all([
         api.get("/teams/my"),
         api.get("/gameweeks/active"),
         api.get("/players/"),
         api.get("/teams/my/history").catch(() => ({ data: [] })),
+        api.get("/stats/dashboard-highlights").catch(() => ({ data: { show: false } }))
       ]);
       
       setTeam(teamRes.data);
       setActiveGW(gwRes.data);
       setPlayers(playersRes.data);
+      setHighlights(highlightsRes.data);
 
       if (gwRes.data) {
         // لو في جولة شغالة، هات نقط الجولة دي
@@ -117,14 +120,12 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 <div className="card p-4">
                   <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>TOTAL POINTS</div>
-                  {/* إجمالي النقط للموسم كله */}
                   <div className="text-4xl font-black gradient-text">{team?.total_points ?? 0}</div>
                 </div>
                 <div className="card p-4">
                   <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
                     {activeGW ? "GAMEWEEK POINTS" : "LAST GAMEWEEK POINTS"}
                   </div>
-                  {/* نقط الجولة الواحدة (سواء الحالية أو آخر واحدة خلصت) */}
                   <div className="text-4xl font-black" style={{ color: "#7c3aed" }}>{teamGW?.gameweek_points ?? 0}</div>
                   {(teamGW?.transfer_penalty ?? 0) > 0 && (
                     <div className="text-xs text-red-400 mt-1">-{teamGW?.transfer_penalty} transfer penalty</div>
@@ -159,6 +160,62 @@ export default function DashboardPage() {
                   <PitchView players={selectedPlayers} />
                 </div>
               </div>
+
+              {/* ── HIGHLIGHTS WIDGETS ── */}
+              {highlights?.show && (
+                <div className="grid md:grid-cols-2 gap-6 mt-2 md:col-span-3">
+                  
+                  {/* Most Owned */}
+                  {highlights.top_owned?.length > 0 && (
+                    <div className="card p-4">
+                      <h3 className="font-bold mb-3 flex items-center gap-2">🔥 Most Owned</h3>
+                      <div className="space-y-3">
+                        {highlights.top_owned.map((item: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: "#1a1a24" }}>
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
+                              <img src={item.player.image_url} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-bold text-sm">{item.player.name}</div>
+                              <div className="text-xs" style={{ color: "var(--muted)" }}>{item.player.team_name}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-black text-blue-400">{item.ownership_percent}%</div>
+                              <div className="text-[10px]" style={{ color: "var(--muted)" }}>TSB</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Top Scorers Last GW */}
+                  {highlights.top_scorers?.length > 0 && (
+                    <div className="card p-4">
+                      <h3 className="font-bold mb-3 flex items-center gap-2">⭐ Top Scorers <span className="text-xs font-normal" style={{color: "var(--muted)"}}>({highlights.last_gw_name})</span></h3>
+                      <div className="space-y-3">
+                        {highlights.top_scorers.map((item: any, idx: number) => (
+                          <div key={idx} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: "#1a1a24" }}>
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
+                              <img src={item.player.image_url} alt="" className="w-full h-full object-cover" />
+                            </div>
+                            <div className="flex-1">
+                              <div className="font-bold text-sm">{item.player.name}</div>
+                              <div className="text-xs" style={{ color: "var(--muted)" }}>{item.player.position}</div>
+                            </div>
+                            <div className="text-right">
+                              <div className="text-sm font-black gradient-text">{item.points}</div>
+                              <div className="text-[10px]" style={{ color: "var(--muted)" }}>pts</div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  
+                </div>
+              )}
+
             </div>
           )}
         </div>

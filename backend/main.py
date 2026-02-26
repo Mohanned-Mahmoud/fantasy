@@ -3,7 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 import os
 
 from app.core.database import create_db_and_tables
-from app.api import auth, players, gameweeks, teams, leaderboard, minileagues
+from app.api import auth, players, gameweeks, teams, leaderboard, minileagues ,stats
 
 app = FastAPI(
     title="Fantasy 5-a-side API",
@@ -25,7 +25,7 @@ app.include_router(gameweeks.router)
 app.include_router(teams.router)
 app.include_router(leaderboard.router)
 app.include_router(minileagues.router)
-
+app.include_router(stats.router)
 
 @app.on_event("startup")
 def startup():
