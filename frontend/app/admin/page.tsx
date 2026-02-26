@@ -218,8 +218,13 @@ export default function AdminPage() {
       await api.put(`/stats/settings?show_stats=${newVal}`);
       setShowStats(newVal);
       flash(newVal ? "Stats are now VISIBLE to users" : "Stats are HIDDEN from users");
-    } catch (err) {
-      flash("Failed to update settings", true);
+    } catch (err: any) {
+      // السطر ده هيخلينا نشوف الإيرور في الكونسول
+      console.error("Settings Error:", err.response || err); 
+      
+      // السطر ده هيظهرلك الإيرور الحقيقي على الشاشة
+      const errorMessage = err.response?.data?.detail || err.message || "Failed to update settings";
+      flash(`Error: ${errorMessage}`, true);
     }
   }
 
