@@ -4,7 +4,7 @@ from typing import List
 from app.core.database import get_session
 from app.models.models import SystemSettings, Player, FantasyTeamGameweek, Gameweek, MatchStat, User
 
-router = APIRouter(prefix="/stats", tags=["Stats"])
+router = APIRouter(prefix="/api/stats", tags=["Stats"])
 
 # 1. جلب وتحديث الإعدادات
 @router.get("/settings")
