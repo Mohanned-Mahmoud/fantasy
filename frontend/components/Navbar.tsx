@@ -116,6 +116,18 @@ export default function Navbar() {
             <span>{item.label.split(" ")[0]}</span>
           </Link>
         ))}
+        {mounted && user?.is_admin && (
+          <Link
+            href="/admin"
+            className="flex-1 flex flex-col items-center py-3 gap-1 text-xs"
+            style={{
+              color: pathname === "/admin" ? "#a78bfa" : "var(--muted)",
+            }}
+          >
+            <span className="text-xl">⚙️</span>
+            <span>Admin</span>
+          </Link>
+        )}
       </nav>
     </>
   );
