@@ -240,7 +240,7 @@ export default function AdminPage() {
                           </div>
                           
                           {/* التعديل الجديد: أزرار التحكم في الجولة */}
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 mt-2">
                             {gw.is_active && <span className="text-xs px-2 py-0.5 rounded font-bold flex items-center" style={{ background: "rgba(56,255,126,0.2)", color: "var(--primary)" }}>ACTIVE</span>}
                             
                             {!gw.is_active && !gw.is_finished && (
@@ -249,11 +249,14 @@ export default function AdminPage() {
                               </button>
                             )}
                             
-                            {!gw.is_finished && (
-                              <button onClick={() => calculatePoints(gw.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium text-white hover:opacity-80 transition-opacity" style={{ background: "#ef4444" }}>
-                                Calculate Points
-                              </button>
-                            )}
+                            {/* زرار الحساب هيفضل ظاهر دايماً، لو الجولة خلصت هيبقى اسمه إعادة حساب ولونه برتقالي */}
+                            <button 
+                              onClick={() => calculatePoints(gw.id)} 
+                              className="text-xs px-3 py-1.5 rounded-lg font-medium text-white hover:opacity-80 transition-opacity" 
+                              style={{ background: gw.is_finished ? "#f59e0b" : "#ef4444" }}
+                            >
+                              {gw.is_finished ? "Recalculate Points" : "Calculate Points"}
+                            </button>
                           </div>
 
                         </div>

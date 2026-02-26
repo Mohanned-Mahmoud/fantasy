@@ -16,6 +16,7 @@ interface TeamGW {
   captain_id?: number;
   gameweek_points: number;
   transfer_penalty: number;
+  gameweek_id?: number;
 }
 
 export default function DashboardPage() {
@@ -37,25 +38,47 @@ export default function DashboardPage() {
 
   async function loadData() {
     try {
-      const [teamRes, gwRes, playersRes] = await Promise.all([
+      // التعديل هنا: هنجيب الـ history بتاع تشكيلاتك عشان لو الجولة قفلت نقرأ منه
+      const [teamRes, gwRes, playersRes, historyRes] = await Promise.all([
         api.get("/teams/my"),
         api.get("/gameweeks/active"),
         api.get("/players/"),
+        api.get("/teams/my/history").catch(() => ({ data: [] })),
       ]);
+      
       setTeam(teamRes.data);
       setActiveGW(gwRes.data);
       setPlayers(playersRes.data);
 
       if (gwRes.data) {
+        // لو في جولة شغالة، هات نقط الجولة دي
         try {
           const tgwRes = await api.get(`/teams/my/gameweek/${gwRes.data.id}`);
-          setTeamGW(tgwRes.data);
-        } catch {}
+          if (tgwRes.data) {
+            setTeamGW(tgwRes.data);
+          } else {
+            // لو الجولة لسه بادئة ومفيش فريق اتسجل فيها لسه، اعرض آخر جولة
+            setLatestHistoryGW(historyRes.data);
+          }
+        } catch {
+          setLatestHistoryGW(historyRes.data);
+        }
+      } else {
+        // لو مفيش جولة شغالة (بين الجولات مثلاً)، اعرض نقط آخر جولة خلصت
+        setLatestHistoryGW(historyRes.data);
       }
     } catch (err) {
       console.error(err);
     } finally {
       setLoading(false);
+    }
+  }
+
+  // دالة مساعدة لاستخراج آخر جولة من السجل
+  function setLatestHistoryGW(historyData: TeamGW[]) {
+    if (historyData && historyData.length > 0) {
+      const sortedHistory = historyData.sort((a, b) => (b.gameweek_id || 0) - (a.gameweek_id || 0));
+      setTeamGW(sortedHistory[0]);
     }
   }
 
@@ -94,10 +117,14 @@ export default function DashboardPage() {
               <div className="space-y-4">
                 <div className="card p-4">
                   <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>TOTAL POINTS</div>
+                  {/* إجمالي النقط للموسم كله */}
                   <div className="text-4xl font-black gradient-text">{team?.total_points ?? 0}</div>
                 </div>
                 <div className="card p-4">
-                  <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>GAMEWEEK POINTS</div>
+                  <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
+                    {activeGW ? "GAMEWEEK POINTS" : "LAST GAMEWEEK POINTS"}
+                  </div>
+                  {/* نقط الجولة الواحدة (سواء الحالية أو آخر واحدة خلصت) */}
                   <div className="text-4xl font-black" style={{ color: "#7c3aed" }}>{teamGW?.gameweek_points ?? 0}</div>
                   {(teamGW?.transfer_penalty ?? 0) > 0 && (
                     <div className="text-xs text-red-400 mt-1">-{teamGW?.transfer_penalty} transfer penalty</div>
