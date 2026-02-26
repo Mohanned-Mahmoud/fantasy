@@ -6,7 +6,8 @@ from datetime import datetime
 
 from app.core.database import get_session
 from app.core.security import get_current_user, get_current_admin
-from app.models.models import Gameweek, MatchStat, Player, User
+# تم تعديل الاستيرادات لتتطابق مع models.py الخاص بك
+from app.models.models import Gameweek, MatchStat, Player, User, FantasyTeam, FantasyTeamGameweek
 from app.services.points_engine import calculate_player_points, get_points_breakdown
 
 router = APIRouter(prefix="/api/gameweeks", tags=["gameweeks"])
@@ -36,7 +37,7 @@ class MatchStatCreate(BaseModel):
     assists: int = 0
     clean_sheet: int = 0
     saves: int = 0
-    defensive_errors: int = 0 # اتعدلت هنا
+    defensive_errors: int = 0
     mvp: bool = False
     nutmegs: int = 0
     own_goals: int = 0
@@ -85,24 +86,110 @@ def create_gameweek(
     return gw
 
 
-@router.put("/{gw_id}/activate")
+@router.put("/{gameweek_id}/activate")
 def activate_gameweek(
-    gw_id: int,
+    gameweek_id: int,
     session: Session = Depends(get_session),
     admin: User = Depends(get_current_admin),
 ):
-    session.exec(select(Gameweek)).all()
-    all_gws = session.exec(select(Gameweek)).all()
-    for gw in all_gws:
+    # 1. إيقاف تفعيل كل الجولات السابقة
+    active_gws = session.exec(select(Gameweek).where(Gameweek.is_active == True)).all()
+    for gw in active_gws:
         gw.is_active = False
         session.add(gw)
-    target = session.get(Gameweek, gw_id)
-    if not target:
+        
+    # 2. تفعيل الجولة الجديدة
+    target_gw = session.get(Gameweek, gameweek_id)
+    if not target_gw:
         raise HTTPException(status_code=404, detail="Gameweek not found")
-    target.is_active = True
-    session.add(target)
+        
+    target_gw.is_active = True
+    session.add(target_gw)
+    
+    # 3. الحل السحري (Rollover): نسخ التشكيلات للفرق في الجولة الجديدة
+    fantasy_teams = session.exec(select(FantasyTeam)).all()
+    for ft in fantasy_teams:
+        existing_ftg = session.exec(
+            select(FantasyTeamGameweek).where(
+                FantasyTeamGameweek.fantasy_team_id == ft.id,
+                FantasyTeamGameweek.gameweek_id == gameweek_id
+            )
+        ).first()
+        
+        if not existing_ftg:
+            # البحث عن أحدث تشكيلة للفريق من الجولات السابقة
+            latest_ftg = session.exec(
+                select(FantasyTeamGameweek)
+                .where(FantasyTeamGameweek.fantasy_team_id == ft.id)
+                .order_by(FantasyTeamGameweek.gameweek_id.desc())
+            ).first()
+            
+            if latest_ftg:
+                new_ftg = FantasyTeamGameweek(
+                    fantasy_team_id=ft.id,
+                    gameweek_id=gameweek_id,
+                    player1_id=latest_ftg.player1_id,
+                    player2_id=latest_ftg.player2_id,
+                    player3_id=latest_ftg.player3_id,
+                    player4_id=latest_ftg.player4_id,
+                    player5_id=latest_ftg.player5_id,
+                    captain_id=latest_ftg.captain_id,
+                    transfers_made=0,
+                    transfer_penalty=0,
+                    gameweek_points=0
+                )
+                session.add(new_ftg)
+
     session.commit()
-    return {"message": f"Gameweek {target.number} activated"}
+    return {"message": "Gameweek activated and teams rolled over"}
+
+
+@router.post("/{gameweek_id}/calculate-points")
+def calculate_gw_points(
+    gameweek_id: int,
+    session: Session = Depends(get_session),
+    admin: User = Depends(get_current_admin),
+):
+    # إحضار كل إحصائيات اللاعبين في الجولة المعنية
+    stats = session.exec(select(MatchStat).where(MatchStat.gameweek_id == gameweek_id)).all()
+    # تحويلها لـ Dictionary للوصول السريع لنقاط اللاعب (باستخدام حقل points)
+    player_pts = {s.player_id: s.points for s in stats}
+
+    # إحضار كل التشكيلات اللي اتسجلت في الجولة دي
+    ftgs = session.exec(select(FantasyTeamGameweek).where(FantasyTeamGameweek.gameweek_id == gameweek_id)).all()
+    for ftg in ftgs:
+        old_gw_pts = ftg.gameweek_points or 0
+        
+        pts = 0
+        players = [ftg.player1_id, ftg.player2_id, ftg.player3_id, ftg.player4_id, ftg.player5_id]
+        
+        for pid in players:
+            if pid:
+                pts += player_pts.get(pid, 0)
+                # مضاعفة نقاط الكابتن
+                if pid == ftg.captain_id:
+                    pts += player_pts.get(pid, 0)
+        
+        # خصم نقاط التغييرات بالسالب
+        final_gw_pts = pts - (ftg.transfer_penalty or 0)
+        ftg.gameweek_points = final_gw_pts
+        session.add(ftg)
+
+        # إضافة النقاط لمجموع نقاط الفريق الكلية (FantasyTeam)
+        ft = session.get(FantasyTeam, ftg.fantasy_team_id)
+        if ft:
+            ft.total_points = (ft.total_points or 0) - old_gw_pts + final_gw_pts
+            session.add(ft)
+
+    # إغلاق الجولة
+    gw = session.get(Gameweek, gameweek_id)
+    if gw:
+        gw.is_active = False
+        gw.is_finished = True
+        session.add(gw)
+
+    session.commit()
+    return {"message": "Points calculated for all users!"}
 
 
 @router.get("/{gw_id}/stats", response_model=List[MatchStatRead])
@@ -135,6 +222,9 @@ def add_match_stat(
             (MatchStat.gameweek_id == gw_id) & (MatchStat.player_id == stat_data.player_id)
         )
     ).first()
+    
+    old_points = existing.points if existing else 0
+
     if existing:
         for key, value in stat_data.model_dump().items():
             setattr(existing, key, value)
@@ -146,12 +236,13 @@ def add_match_stat(
     stat.points = pts
 
     session.add(stat)
+    
+    # تصليح بسيط عشان لو عدلت الإحصائية مايجمعش النقط مرتين للاعب
+    player.total_points = (player.total_points - old_points) + pts
+    session.add(player)
+    
     session.commit()
     session.refresh(stat)
-
-    player.total_points += pts
-    session.add(player)
-    session.commit()
 
     return stat
 

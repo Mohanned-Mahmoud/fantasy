@@ -44,12 +44,25 @@ export default function SquadPage() {
       if (gwRes.data) {
         try {
           const tgwRes = await api.get(`/teams/my/gameweek/${gwRes.data.id}`);
-          if (tgwRes.data) {
+          // التعديل هنا: محاولة تحميل التشكيلة للجولة الحالية
+          if (tgwRes.data && tgwRes.data.player1_id) {
             const ids = [tgwRes.data.player1_id, tgwRes.data.player2_id, tgwRes.data.player3_id, tgwRes.data.player4_id, tgwRes.data.player5_id].filter(Boolean);
             setSelectedIds(ids);
             if (tgwRes.data.captain_id) setCaptainId(tgwRes.data.captain_id);
+          } else if (teamRes.data) {
+             // Fallback: لو مفيش تشكيلة لسه (أو الباك إند تأخر في النسخ)، هات آخر تشكيلة محفوظة في الفريق الأساسي
+            const ids = [teamRes.data.player1_id, teamRes.data.player2_id, teamRes.data.player3_id, teamRes.data.player4_id, teamRes.data.player5_id].filter(Boolean);
+            setSelectedIds(ids);
+            if (teamRes.data.captain_id) setCaptainId(teamRes.data.captain_id);
           }
-        } catch {}
+        } catch {
+          // Fallback في حالة حدوث إيرور 404 (لم يتم العثور على تشكيلة)
+          if (teamRes.data) {
+            const ids = [teamRes.data.player1_id, teamRes.data.player2_id, teamRes.data.player3_id, teamRes.data.player4_id, teamRes.data.player5_id].filter(Boolean);
+            setSelectedIds(ids);
+            if (teamRes.data.captain_id) setCaptainId(teamRes.data.captain_id);
+          }
+        }
       }
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
@@ -206,7 +219,6 @@ export default function SquadPage() {
                           }}
                           onClick={() => togglePlayer(player)}
                         >
-                          {/* التعديل هنا: عرض صورة اللاعب بدلاً من الدائرة الملونة فقط */}
                           <div
                             className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 overflow-hidden border border-white/10"
                             style={{ background: posColors[player.position] || "#6b7280" }}
@@ -220,10 +232,7 @@ export default function SquadPage() {
 
                           <div className="flex-1 min-w-0">
                             <div className="font-medium text-sm truncate flex items-center gap-2">
-                              {/* اسم اللاعب */}
                               {player.name}
-
-                              {/* إطار المركز الصغير */}
                               <span 
                                 className="text-[9px] px-1.5 py-0.5 rounded font-bold text-white uppercase tracking-wider"
                                 style={{ 
@@ -233,8 +242,6 @@ export default function SquadPage() {
                               >
                                 {player.position}
                               </span>
-
-                              {/* علامة الكابتن لو موجودة */}
                               {isCap && (
                                 <span className="text-xs px-1 rounded font-bold" style={{ background: "var(--primary)", color: "#0f0f13" }}>
                                   C

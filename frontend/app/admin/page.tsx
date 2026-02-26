@@ -36,7 +36,6 @@ export default function AdminPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // التعديل: أضفنا image_url هنا
   const [newPlayer, setNewPlayer] = useState({ name: "", position: "GK", team_name: "", price: "5.0", image_url: "" });
   const [newGW, setNewGW] = useState({ number: "", name: "", deadline: "" });
   const [statGWId, setStatGWId] = useState("");
@@ -66,7 +65,6 @@ export default function AdminPage() {
   async function createPlayer() {
     if (!newPlayer.name || !newPlayer.team_name) { flash("Fill all fields", true); return; }
     try {
-      // التعديل: إرسال الـ image_url للباك إند
       await api.post("/players/", { 
         ...newPlayer, 
         price: parseFloat(newPlayer.price),
@@ -91,9 +89,21 @@ export default function AdminPage() {
   async function activateGW(id: number) {
     try {
       await api.put(`/gameweeks/${id}/activate`);
-      flash("Gameweek activated!");
+      flash("Gameweek activated & Teams Rolled Over!");
       loadData();
     } catch (err: any) { flash("Failed", true); }
+  }
+
+  // التعديل الجديد: دالة حساب النقاط
+  async function calculatePoints(id: number) {
+    if (!confirm("Are you sure? This will calculate points for all users and close the Gameweek.")) return;
+    try {
+      await api.post(`/gameweeks/${id}/calculate-points`);
+      flash("Points calculated and added to users successfully!");
+      loadData();
+    } catch (err: any) {
+      flash(err.response?.data?.detail || "Failed to calculate points", true);
+    }
   }
 
   async function submitStat() {
@@ -112,7 +122,7 @@ export default function AdminPage() {
         minutes_played: parseInt(statForm.minutes_played),
       };
       await api.post(`/gameweeks/${statGWId}/stats`, payload);
-      flash("Stats saved and points calculated!");
+      flash("Stats saved for player!");
       setStatForm(defaultStatForm);
     } catch (err: any) { flash(err.response?.data?.detail || "Failed", true); }
   }
@@ -167,7 +177,6 @@ export default function AdminPage() {
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Price (M)</label>
                         <input type="number" step="0.5" min="1" max="15" value={newPlayer.price} onChange={(e) => setNewPlayer((p) => ({ ...p, price: e.target.value }))} className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
                       </div>
-                      {/* التعديل: إضافة خانة رابط الصورة */}
                       <div className="col-span-2">
                         <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Image Path (e.g. /players/player.jpg)</label>
                         <input value={newPlayer.image_url} onChange={(e) => setNewPlayer((p) => ({ ...p, image_url: e.target.value }))} placeholder="/players/messi.jpg" className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]" />
@@ -181,8 +190,7 @@ export default function AdminPage() {
                     <div className="space-y-2 max-h-80 overflow-y-auto">
                       {players.map((p) => (
                         <div key={p.id} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: "#1a1a24" }}>
-                          {/* التعديل: عرض صورة اللاعب المصغرة في القائمة */}
-                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-700">
+                          <div className="w-8 h-8 rounded-full overflow-hidden bg-gray-700 flex-shrink-0">
                              <img src={p.image_url || "/players/default.png"} alt="" className="w-full h-full object-cover" />
                           </div>
                           <span className="text-xs px-2 py-0.5 rounded font-bold text-white w-10 text-center" style={{ background: { GK: "#f59e0b", DEF: "#3b82f6", MID: "#8b5cf6", ATT: "#ef4444" }[p.position] || "#6b7280" }}>{p.position}</span>
@@ -224,15 +232,30 @@ export default function AdminPage() {
                       {gameweeks.map((gw) => (
                         <div key={gw.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "#1a1a24" }}>
                           <div className="flex-1">
-                            <div className="font-medium text-sm">{gw.name}</div>
+                            <div className="font-medium text-sm">
+                              {gw.name} 
+                              {gw.is_finished && <span className="ml-2 text-[10px] text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">FINISHED</span>}
+                            </div>
                             <div className="text-xs" style={{ color: "var(--muted)" }}>Deadline: {new Date(gw.deadline).toLocaleDateString()}</div>
                           </div>
-                          {gw.is_active && <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background: "rgba(56,255,126,0.2)", color: "var(--primary)" }}>ACTIVE</span>}
-                          {!gw.is_active && (
-                            <button onClick={() => activateGW(gw.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: "#2a2a3a" }}>
-                              Activate
-                            </button>
-                          )}
+                          
+                          {/* التعديل الجديد: أزرار التحكم في الجولة */}
+                          <div className="flex gap-2">
+                            {gw.is_active && <span className="text-xs px-2 py-0.5 rounded font-bold flex items-center" style={{ background: "rgba(56,255,126,0.2)", color: "var(--primary)" }}>ACTIVE</span>}
+                            
+                            {!gw.is_active && !gw.is_finished && (
+                              <button onClick={() => activateGW(gw.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium hover:bg-[#3a3a4a] transition-colors" style={{ background: "#2a2a3a" }}>
+                                Activate
+                              </button>
+                            )}
+                            
+                            {!gw.is_finished && (
+                              <button onClick={() => calculatePoints(gw.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium text-white hover:opacity-80 transition-opacity" style={{ background: "#ef4444" }}>
+                                Calculate Points
+                              </button>
+                            )}
+                          </div>
+
                         </div>
                       ))}
                     </div>
@@ -248,7 +271,7 @@ export default function AdminPage() {
                       <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Gameweek</label>
                       <select value={statGWId} onChange={(e) => setStatGWId(e.target.value)} className="w-full p-2 rounded bg-[#1a1a24] border border-[#2a2a3a]">
                         <option value="">Select gameweek</option>
-                        {gameweeks.map((gw) => <option key={gw.id} value={gw.id}>{gw.name}</option>)}
+                        {gameweeks.filter(gw => !gw.is_finished).map((gw) => <option key={gw.id} value={gw.id}>{gw.name}</option>)}
                       </select>
                     </div>
                     <div>
@@ -284,7 +307,7 @@ export default function AdminPage() {
                   </div>
 
                   <button onClick={submitStat} className="btn-primary py-2.5 text-sm w-full">
-                    Save Stats & Calculate Points
+                    Save Stats
                   </button>
                 </div>
               )}
