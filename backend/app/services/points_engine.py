@@ -7,21 +7,21 @@ from app.models.models import MatchStat, Player
 
 POINTS_CONFIG = {
     "GK": {
-        "goal": 6,
+        "goal": 6,            # إعجاز
         "assist": 3,
-        "clean_sheet": 5,
-        "save_per_3": 1,
+        "clean_sheet": 5,     
+        "save_per_3": 1,      
         "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
-        "nutmeg": 1,
-        "penalty_scored": 3,      # جول ضربة جزاء
-        "penalty_saved": 5,       # صد ضربة جزاء
-        "penalty_miss": -2,       # ضياع ضربة جزاء
+        "nutmeg": 2,          
+        "penalty_scored": 3,
+        "penalty_saved": 5,
+        "penalty_miss": -2,
     },
     "DEF": {
-        "goal": 5,
+        "goal": 5,            # الجول بـ 5 عشان نشجعه يزيد
         "assist": 3,
         "clean_sheet": 3,
         "save_per_3": 0,
@@ -29,37 +29,37 @@ POINTS_CONFIG = {
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
-        "nutmeg": 1,
+        "nutmeg": 2,          
         "penalty_scored": 3,
-        "penalty_saved": 7,
+        "penalty_saved": 5,   
         "penalty_miss": -2,
     },
     "MID": {
-        "goal": 5,
+        "goal": 5,            # زي المدافع
         "assist": 3,
-        "clean_sheet": 1,
+        "clean_sheet": 2,     
         "save_per_3": 0,
         "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
-        "nutmeg": 1,
+        "nutmeg": 2,
         "penalty_scored": 3,
-        "penalty_saved": 7,
+        "penalty_saved": 5,
         "penalty_miss": -2,
     },
     "ATT": {
-        "goal": 4,
+        "goal": 4,            # رجعناه لـ 4 نقط عشان ياخد حقه لما يتألق ⚽
         "assist": 3,
-        "clean_sheet": 0,
+        "clean_sheet": 1,     # ولسه بياخد نقطة لما الفرقة تقفل ورا 🛡️
         "save_per_3": 0,
         "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
-        "nutmeg": 1,
+        "nutmeg": 2,
         "penalty_scored": 3,
-        "penalty_saved": 7,
+        "penalty_saved": 5,
         "penalty_miss": -2,
     },
 }
