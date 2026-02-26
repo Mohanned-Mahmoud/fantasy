@@ -2,6 +2,7 @@ from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlmodel import Session, select
 from pydantic import BaseModel
+from datetime import datetime # التعديل: استيراد مكتبة الوقت
 
 from app.core.database import get_session
 from app.core.security import get_current_user
@@ -131,6 +132,14 @@ def select_squad(
     gw = session.get(Gameweek, selection.gameweek_id)
     if not gw:
         raise HTTPException(status_code=404, detail="Gameweek not found")
+
+    # ========== التعديل الجديد: منع التعديل بعد الديدلاين ==========
+    if datetime.utcnow() > gw.deadline:
+        raise HTTPException(
+            status_code=403, 
+            detail="The deadline has passed! You cannot make changes to your squad for this Gameweek."
+        )
+    # ===============================================================
 
     existing_tgw = session.exec(
         select(FantasyTeamGameweek).where(
