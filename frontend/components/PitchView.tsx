@@ -1,5 +1,6 @@
 "use client";
 
+import { useRef } from "react";
 import { Player } from "@/lib/api";
 
 interface PitchPlayer {
@@ -30,6 +31,26 @@ const rowVerticalPosition: Record<string, string> = {
 };
 
 export default function PitchView({ players, onPlayerClick, onCaptainToggle }: PitchViewProps) {
+  const lastTapTimeRef = useRef(0);
+  const lastTapPlayerIdRef = useRef<number | null>(null);
+
+  function handlePlayerTouchEnd(playerId: number) {
+    if (!onCaptainToggle) return;
+
+    const now = Date.now();
+    const isSamePlayer = lastTapPlayerIdRef.current === playerId;
+    const isDoubleTap = isSamePlayer && now - lastTapTimeRef.current < 350;
+
+    if (isDoubleTap) {
+      onCaptainToggle(playerId);
+      lastTapTimeRef.current = 0;
+      lastTapPlayerIdRef.current = null;
+      return;
+    }
+
+    lastTapTimeRef.current = now;
+    lastTapPlayerIdRef.current = playerId;
+  }
   
   // دالة لتوزيع اللاعبين عرضياً بشكل متساوي
   const getDynamicPositions = (currentPlayers: PitchPlayer[]) => {
@@ -83,6 +104,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
         <div
           key={`${pp.player.id}-${idx}`}
           onClick={() => onPlayerClick?.(pp.player)}
+          onTouchEnd={() => handlePlayerTouchEnd(pp.player.id)}
           className="absolute flex flex-col items-center gap-1 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer transition-all duration-500 ease-in-out"
           style={{ top: pp.top, left: pp.left, zIndex: 10 }}
         >
