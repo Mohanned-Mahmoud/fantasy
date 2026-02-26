@@ -7,7 +7,7 @@ from datetime import datetime # التعديل: استيراد مكتبة الو
 from app.core.database import get_session
 from app.core.security import get_current_user
 from app.models.models import (
-    User, FantasyTeam, FantasyTeamGameweek, Gameweek, Player, MatchStat
+    User, FantasyTeam, FantasyTeamGameweek, Gameweek, Player, MatchStat,SystemSettings
 )
 from app.services.points_engine import calculate_gameweek_team_points
 
@@ -88,6 +88,14 @@ def select_squad(
     current_user: User = Depends(get_current_user),
     session: Session = Depends(get_session),
 ):
+    # ========== فحص قفل التغييرات من الأدمن ==========
+    settings = session.get(SystemSettings, 1)
+    if settings and not settings.allow_transfers:
+        raise HTTPException(
+            status_code=403,
+            detail="Transfers and team modifications are currently LOCKED by the admin."
+        )
+    # =================================================
     if len(selection.player_ids) != 5:
         raise HTTPException(status_code=400, detail="Must select exactly 5 players")
 

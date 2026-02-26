@@ -65,6 +65,7 @@ class MatchStat(SQLModel, table=True):
 class SystemSettings(SQLModel, table=True):
     id: Optional[int] = Field(default=1, primary_key=True)
     show_dashboard_stats: bool = Field(default=False)
+    allow_transfers: bool = Field(default=True)  # <-- السطر الجديد
 
 
 class FantasyTeam(SQLModel, table=True):

@@ -3,6 +3,7 @@ from sqlmodel import Session, select, func
 from typing import List
 from app.core.database import get_session
 from app.models.models import SystemSettings, Player, FantasyTeamGameweek, Gameweek, MatchStat, User
+from typing import Optional # ضيف دي فوق لو مش موجودة
 
 router = APIRouter(prefix="/api/stats", tags=["Stats"])
 
@@ -18,13 +19,24 @@ def get_settings(session: Session = Depends(get_session)):
     return settings
 
 @router.put("/settings")
-def update_settings(show_stats: bool, session: Session = Depends(get_session)):
+def update_settings(
+    show_stats: Optional[bool] = None, 
+    allow_transfers: Optional[bool] = None, 
+    session: Session = Depends(get_session)
+):
     settings = session.get(SystemSettings, 1)
     if not settings:
-        settings = SystemSettings(id=1, show_dashboard_stats=show_stats)
+        settings = SystemSettings(id=1)
         session.add(settings)
-    else:
+    
+    # لو الأدمن بعت تعديل للإحصائيات
+    if show_stats is not None:
         settings.show_dashboard_stats = show_stats
+        
+    # لو الأدمن بعت تعديل لقفل/فتح التغييرات
+    if allow_transfers is not None:
+        settings.allow_transfers = allow_transfers
+        
     session.commit()
     return {"status": "success"}
 

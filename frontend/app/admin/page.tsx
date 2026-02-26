@@ -128,6 +128,7 @@ export default function AdminPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameweeks, setGameweeks] = useState<Gameweek[]>([]);
   const [showStats, setShowStats] = useState(false);
+  const [allowTransfers, setAllowTransfers] = useState(true); // <-- ضفنا الخاصية دي
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -156,11 +157,12 @@ export default function AdminPage() {
       const [pRes, gRes, settingsRes] = await Promise.all([
         api.get("/players/"), 
         api.get("/gameweeks/"),
-        api.get("/stats/settings").catch(() => ({ data: { show_dashboard_stats: false } }))
+        api.get("/stats/settings").catch(() => ({ data: { show_dashboard_stats: false, allow_transfers: true } }))
       ]);
       setPlayers(pRes.data);
       setGameweeks(gRes.data);
       setShowStats(settingsRes.data?.show_dashboard_stats || false);
+      setAllowTransfers(settingsRes.data?.allow_transfers ?? true); // <-- تحديث الحالة من الباك إند
       
       const openGWs = gRes.data.filter((gw: Gameweek) => !gw.is_finished);
       const activeOpen = openGWs.find((gw: Gameweek) => gw.is_active) || openGWs[0];
@@ -219,10 +221,21 @@ export default function AdminPage() {
       setShowStats(newVal);
       flash(newVal ? "Stats are now VISIBLE to users" : "Stats are HIDDEN from users");
     } catch (err: any) {
-      // السطر ده هيخلينا نشوف الإيرور في الكونسول
       console.error("Settings Error:", err.response || err); 
-      
-      // السطر ده هيظهرلك الإيرور الحقيقي على الشاشة
+      const errorMessage = err.response?.data?.detail || err.message || "Failed to update settings";
+      flash(`Error: ${errorMessage}`, true);
+    }
+  }
+
+  // <-- الدالة الجديدة للتحكم في قفل/فتح اللعبة -->
+  async function toggleTransfers() {
+    try {
+      const newVal = !allowTransfers;
+      await api.put(`/stats/settings?allow_transfers=${newVal}`);
+      setAllowTransfers(newVal);
+      flash(newVal ? "Transfers are now UNLOCKED" : "Transfers are now LOCKED for everyone");
+    } catch (err: any) {
+      console.error("Settings Error:", err.response || err); 
       const errorMessage = err.response?.data?.detail || err.message || "Failed to update settings";
       flash(`Error: ${errorMessage}`, true);
     }
@@ -631,8 +644,9 @@ export default function AdminPage() {
 
               {/* ── SETTINGS TAB ── */}
               {activeTab === "settings" && (
-                <div className="card p-4">
-                  <h2 className="font-semibold mb-4">Dashboard Features</h2>
+                <div className="card p-4 space-y-4">
+                  
+                  <h2 className="font-semibold mb-2">Dashboard Features</h2>
                   <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1a1a24", padding: "16px", borderRadius: "12px", border: "1px solid #2a2a3a" }}>
                     <div>
                       <div style={{ fontWeight: "bold", fontSize: "15px" }}>Show Highlights Stats</div>
@@ -653,6 +667,30 @@ export default function AdminPage() {
                       {showStats ? "Disable" : "Enable"}
                     </button>
                   </div>
+
+                  <h2 className="font-semibold mb-2 mt-4">Game Settings</h2>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1a1a24", padding: "16px", borderRadius: "12px", border: "1px solid #2a2a3a" }}>
+                    <div>
+                      <div style={{ fontWeight: "bold", fontSize: "15px" }}>Allow Transfers & Squad Changes</div>
+                      <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: "4px" }}>
+                        Turn this off to globally lock all user squads (e.g., during live matches).
+                      </div>
+                    </div>
+                    <button 
+                      onClick={toggleTransfers}
+                      style={{
+                        padding: "8px 16px", borderRadius: "8px", fontWeight: "bold", fontSize: "13px",
+                        background: !allowTransfers ? "rgba(239,68,68,0.1)" : "rgba(56,255,126,0.1)",
+                        color: !allowTransfers ? "#ef4444" : "var(--primary)",
+                        border: `1px solid ${!allowTransfers ? "rgba(239,68,68,0.2)" : "rgba(56,255,126,0.2)"}`,
+                        cursor: "pointer",
+                        minWidth: "120px"
+                      }}
+                    >
+                      {!allowTransfers ? "Locked (Unlock)" : "Unlocked (Lock)"}
+                    </button>
+                  </div>
+
                 </div>
               )}
             </>
