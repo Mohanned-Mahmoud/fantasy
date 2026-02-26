@@ -55,6 +55,9 @@ class MatchStat(SQLModel, table=True):
     own_goals: int = Field(default=0)
     minutes_played: int = Field(default=0)
     points: int = Field(default=0)
+    penalties_scored: int = Field(default=0)  # أهداف من ضربات جزاء
+    penalties_saved: int = Field(default=0)   # ضربات جزاء تم التصدي لها
+    penalties_missed: int = Field(default=0)  # ضربات جزاء ضائعة (خارج المرمى أو القائم)
 
     player: Optional[Player] = Relationship(back_populates="match_stats")
     gameweek: Optional[Gameweek] = Relationship(back_populates="match_stats")
