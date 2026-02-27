@@ -6,7 +6,6 @@ from datetime import datetime
 
 from app.core.database import get_session
 from app.core.security import get_current_user, get_current_admin
-# تم تعديل الاستيرادات لتتطابق مع models.py الخاص بك
 from app.models.models import Gameweek, MatchStat, Player, User, FantasyTeam, FantasyTeamGameweek
 from app.services.points_engine import calculate_player_points, get_points_breakdown
 
@@ -42,8 +41,8 @@ class MatchStatCreate(BaseModel):
     nutmegs: int = 0
     own_goals: int = 0
     minutes_played: int = 120
-    penalties_scored: int = 0   # ضفنا ده
-    penalties_saved: int = 0    # وضفنا ده
+    penalties_scored: int = 0
+    penalties_saved: int = 0
     penalties_missed: int = 0
 
 
@@ -60,9 +59,9 @@ class MatchStatRead(BaseModel):
     own_goals: int
     minutes_played: int
     points: int
-    penalties_scored: int  # ضفنا ده
-    penalties_saved: int   # وضفنا ده
-    penalties_missed: int  # وضفنا ده
+    penalties_scored: int
+    penalties_saved: int
+    penalties_missed: int
 
     class Config:
         from_attributes = True
@@ -156,20 +155,37 @@ def calculate_gw_points(
     session: Session = Depends(get_session),
     admin: User = Depends(get_current_admin),
 ):
-    # إحضار كل إحصائيات اللاعبين في الجولة المعنية
+    # 1. إحضار كل الإحصائيات وإعادة حسابها بالنظام الجديد أولاً
     stats = session.exec(select(MatchStat).where(MatchStat.gameweek_id == gameweek_id)).all()
-    # تحويلها لـ Dictionary للوصول السريع لنقاط اللاعب (باستخدام حقل points)
-    player_pts = {s.player_id: s.points for s in stats}
+    player_pts = {}
+    
+    for stat in stats:
+        player = session.get(Player, stat.player_id)
+        if player:
+            old_pts = stat.points or 0
+            # إرسال الإحصائيات لـ points_engine الجديد للحصول على الحسبة الصحيحة
+            new_pts = calculate_player_points(stat, player.position)
+            
+            # تحديث النقط في جدول الإحصائيات
+            stat.points = new_pts
+            session.add(stat)
+            
+            # تظبيط الإجمالي بتاع اللاعب في بروفايله
+            player.total_points = (player.total_points or 0) - old_pts + new_pts
+            session.add(player)
+            
+            # حفظ النقطة الجديدة عشان نجمعها للفرق
+            player_pts[stat.player_id] = new_pts
 
-    # إحضار كل التشكيلات اللي اتسجلت في الجولة دي
+    # 2. إحضار كل التشكيلات وإعادة حساب نقط اليوزرز
     ftgs = session.exec(select(FantasyTeamGameweek).where(FantasyTeamGameweek.gameweek_id == gameweek_id)).all()
     for ftg in ftgs:
         old_gw_pts = ftg.gameweek_points or 0
         
         pts = 0
-        players = [ftg.player1_id, ftg.player2_id, ftg.player3_id, ftg.player4_id, ftg.player5_id]
+        players_in_team = [ftg.player1_id, ftg.player2_id, ftg.player3_id, ftg.player4_id, ftg.player5_id]
         
-        for pid in players:
+        for pid in players_in_team:
             if pid:
                 pts += player_pts.get(pid, 0)
                 # مضاعفة نقاط الكابتن
@@ -195,7 +211,7 @@ def calculate_gw_points(
         session.add(gw)
 
     session.commit()
-    return {"message": "Points calculated for all users!"}
+    return {"message": "Points recalculated perfectly using the new engine!"}
 
 
 @router.get("/{gw_id}/stats", response_model=List[MatchStatRead])
