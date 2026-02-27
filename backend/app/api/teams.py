@@ -243,7 +243,7 @@ def get_user_team_gameweek(
 
     # حماية التشكيلة: منع رؤية تشكيلات الآخرين في الجولة الحالية قبل الديدلاين
     if gw.is_active and current_user.username != username:
-        raise HTTPException(status_code=403, detail="لا يمكنك رؤية تشكيلة هذا المدرب للجولة الحالية قبل انتهاء الديدلاين 🔒")
+        raise HTTPException(status_code=403, detail="Can't view other managers' teams in the current gameweek before deadline 🔒")
 
     tgw = session.exec(
         select(FantasyTeamGameweek).where(

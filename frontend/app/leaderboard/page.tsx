@@ -72,10 +72,10 @@ export default function LeaderboardPage() {
       if (res.data && res.data.player1_id) {
         setManagerTeam(res.data);
       } else {
-        setTeamError("هذا المدرب لم يقم بعمل تشكيلة لهذه الجولة 🤷‍♂️");
+        setTeamError("This manager hasn't selected a team for this gameweek 🤷‍♂️");
       }
     } catch (err: any) {
-      setTeamError(err.response?.data?.detail || "حدث خطأ أثناء جلب التشكيلة");
+      setTeamError(err.response?.data?.detail || "Error fetching team data");
     } finally {
       setLoadingTeam(false);
     }
@@ -183,7 +183,7 @@ export default function LeaderboardPage() {
               <label className="text-xs text-gray-400 font-semibold mb-1 block">Past Gameweeks:</label>
               {finishedGWs.length === 0 ? (
                 <div className="text-sm text-yellow-500 bg-yellow-500/10 border border-yellow-500/20 p-2 rounded">
-                  لا يوجد جولات منتهية بعد لعرض التشكيلات.
+                  No finished gameweeks yet. Check back after the first gameweek concludes! ⏳
                 </div>
               ) : (
                 <select 
@@ -202,7 +202,7 @@ export default function LeaderboardPage() {
 
             <div className="flex-1 overflow-y-auto pr-1">
               {loadingTeam ? (
-                <div className="text-center py-10 text-gray-400 animate-pulse">جاري سحب التشكيلة... ⏳</div>
+                <div className="text-center py-10 text-gray-400 animate-pulse">Loading the team data... ⏳</div>
               ) : teamError ? (
                 <div className="text-center py-10 text-red-400 bg-red-400/10 rounded-xl border border-red-400/20">
                   {teamError}
