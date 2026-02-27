@@ -556,9 +556,9 @@ export default function AdminPage() {
                     </div>
                   </div>
 
-                  {/* Progress pills */}
+                  {/* ── التعديل الجديد: عرض الصور بدل الحروف ── */}
                   {queuePlayers.length > 0 && (
-                    <div style={{ display: "flex", gap: 4, marginBottom: 16, overflowX: "auto", paddingBottom: 4 }}>
+                    <div style={{ display: "flex", gap: 6, marginBottom: 16, overflowX: "auto", paddingBottom: 8 }}>
                       {queuePlayers.map((p, i) => {
                         const isSaved = savedIds.has(String(p.id));
                         const isCurrent = i === currentIdx && !sessionDone;
@@ -567,20 +567,28 @@ export default function AdminPage() {
                             key={p.id}
                             title={p.name}
                             onClick={() => goToPlayer(i)}
+                            className="relative flex-shrink-0"
                             style={{
-                              flexShrink: 0,
-                              width: 30, height: 30,
-                              borderRadius: 6,
-                              display: "flex", alignItems: "center", justifyContent: "center",
-                              fontSize: 8, fontWeight: 700,
+                              width: 36, height: 36, // كبرناها عشان الصورة تبان
+                              borderRadius: 8,
                               cursor: "pointer",
-                              border: `1.5px solid ${isSaved ? "rgba(74,222,128,.4)" : isCurrent ? "#4a6bde" : "#2a2a3a"}`,
-                              background: isSaved ? "rgba(74,222,128,.12)" : isCurrent ? "#1e1e3a" : "#1a1a24",
-                              color: isSaved ? "#4ade80" : isCurrent ? "#93c5fd" : "#475569",
+                              border: `2px solid ${isSaved ? "#4ade80" : isCurrent ? "#3b82f6" : "#2a2a3a"}`,
+                              overflow: "hidden", // مهم عشان الصورة تاخد شكل الإطار
                               transition: "all .15s",
+                              opacity: isSaved ? 0.5 : 1, // لو اللاعب خلص الإحصائيات صورته تبهت شوية
                             }}
                           >
-                            {p.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2)}
+                            <img 
+                              src={p.image_url || "/players/default.png"} 
+                              alt={p.name} 
+                              style={{ width: "100%", height: "100%", objectFit: "cover" }} 
+                            />
+                            {/* علامة صح صغيرة فوق الصورة للي خلصوا */}
+                            {isSaved && (
+                              <div className="absolute inset-0 flex items-center justify-center bg-black/40">
+                                <span className="text-white text-xs">✓</span>
+                              </div>
+                            )}
                           </div>
                         );
                       })}
@@ -665,7 +673,6 @@ export default function AdminPage() {
                         </div>
                       </div>
 
-                      {/* Save & Skip */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 3fr", gap: 8 }}>
                         <button
                           onClick={skipPlayer}
