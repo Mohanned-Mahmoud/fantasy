@@ -16,7 +16,12 @@ export default function SquadPage() {
   const router = useRouter();
   const [players, setPlayers] = useState<Player[]>([]);
   const [team, setTeam] = useState<FantasyTeam | null>(null);
+  
+  // States الجديدة للجولات
+  const [allGWs, setAllGWs] = useState<Gameweek[]>([]);
   const [activeGW, setActiveGW] = useState<Gameweek | null>(null);
+  const [viewedGW, setViewedGW] = useState<Gameweek | null>(null);
+  
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [captainId, setCaptainId] = useState<number | null>(null);
   const [filterPos, setFilterPos] = useState<string>("ALL");
@@ -25,10 +30,13 @@ export default function SquadPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  // States للـ Popup بتاع تفاصيل اللاعب
+  // States البوب-أب
   const [infoPlayer, setInfoPlayer] = useState<Player | null>(null);
   const [playerBreakdown, setPlayerBreakdown] = useState<Record<string, number> | null>(null);
   const [loadingBreakdown, setLoadingBreakdown] = useState(false);
+
+  // حالة بتحدد إذا كان مسموح التعديل ولا لأ
+  const canEdit = viewedGW?.id === activeGW?.id && activeGW !== null;
 
   useEffect(() => {
     if (!isLoggedIn()) { router.push("/login"); return; }
@@ -37,37 +45,75 @@ export default function SquadPage() {
 
   async function loadData() {
     try {
-      const [playersRes, teamRes, gwRes] = await Promise.all([
+      // 1. هنجيب كل الجولات مش الأكتيف بس
+      const [playersRes, teamRes, gwsRes] = await Promise.all([
         api.get("/players/"),
         api.get("/teams/my"),
-        api.get("/gameweeks/active"),
+        api.get("/gameweeks/"),
       ]);
+      
       setPlayers(playersRes.data);
       setTeam(teamRes.data);
-      setActiveGW(gwRes.data);
+      
+      const gws: Gameweek[] = gwsRes.data;
+      setAllGWs(gws);
+      
+      const active = gws.find(g => g.is_active) || null;
+      setActiveGW(active);
+      
+      // هنعرض الجولة الحالية، لو مفيش هنعرض أحدث جولة خلصت
+      const initialGW = active || gws[gws.length - 1] || null;
+      setViewedGW(initialGW);
 
-      if (gwRes.data) {
-        try {
-          const tgwRes = await api.get(`/teams/my/gameweek/${gwRes.data.id}`);
-          if (tgwRes.data && tgwRes.data.player1_id) {
-            const ids = [tgwRes.data.player1_id, tgwRes.data.player2_id, tgwRes.data.player3_id, tgwRes.data.player4_id, tgwRes.data.player5_id].filter(Boolean);
-            setSelectedIds(ids);
-            if (tgwRes.data.captain_id) setCaptainId(tgwRes.data.captain_id);
-          } else if (teamRes.data) {
-            const ids = [teamRes.data.player1_id, teamRes.data.player2_id, teamRes.data.player3_id, teamRes.data.player4_id, teamRes.data.player5_id].filter(Boolean);
-            setSelectedIds(ids);
-            if (teamRes.data.captain_id) setCaptainId(teamRes.data.captain_id);
-          }
-        } catch {
-          if (teamRes.data) {
-            const ids = [teamRes.data.player1_id, teamRes.data.player2_id, teamRes.data.player3_id, teamRes.data.player4_id, teamRes.data.player5_id].filter(Boolean);
-            setSelectedIds(ids);
-            if (teamRes.data.captain_id) setCaptainId(teamRes.data.captain_id);
-          }
-        }
+      if (initialGW) {
+        await fetchSquadForGW(initialGW.id, teamRes.data, active?.id === initialGW.id);
       }
-    } catch (err) { console.error(err); }
-    finally { setLoading(false); }
+    } catch (err) { 
+      console.error(err); 
+    } finally { 
+      setLoading(false); 
+    }
+  }
+
+  // دالة بتجيب تشكيلة اليوزر في جولة معينة
+  async function fetchSquadForGW(gwId: number, baseTeam: any, isActiveGW: boolean) {
+    try {
+      const res = await api.get(`/teams/my/gameweek/${gwId}`);
+      if (res.data && res.data.player1_id) {
+        const ids = [res.data.player1_id, res.data.player2_id, res.data.player3_id, res.data.player4_id, res.data.player5_id].filter(Boolean);
+        setSelectedIds(ids);
+        setCaptainId(res.data.captain_id);
+      } else if (isActiveGW && baseTeam) {
+        const ids = [baseTeam.player1_id, baseTeam.player2_id, baseTeam.player3_id, baseTeam.player4_id, baseTeam.player5_id].filter(Boolean);
+        setSelectedIds(ids);
+        setCaptainId(baseTeam.captain_id);
+      } else {
+        setSelectedIds([]);
+        setCaptainId(null);
+      }
+    } catch {
+      if (isActiveGW && baseTeam) {
+        const ids = [baseTeam.player1_id, baseTeam.player2_id, baseTeam.player3_id, baseTeam.player4_id, baseTeam.player5_id].filter(Boolean);
+        setSelectedIds(ids);
+        setCaptainId(baseTeam.captain_id);
+      } else {
+        setSelectedIds([]);
+        setCaptainId(null);
+      }
+    }
+  }
+
+  // لما يغير الجولة من الـ Dropdown
+  function handleGWChange(e: React.ChangeEvent<HTMLSelectElement>) {
+    const gwId = parseInt(e.target.value);
+    const selected = allGWs.find(g => g.id === gwId) || null;
+    setViewedGW(selected);
+    setError(""); // شيل أي إيرور قديم
+    setMessage("");
+    
+    if (selected) {
+      fetchSquadForGW(selected.id, team, selected.id === activeGW?.id);
+    }
   }
 
   const selectedPlayers = selectedIds.map((id) => players.find((p) => p.id === id)).filter(Boolean) as Player[];
@@ -75,6 +121,11 @@ export default function SquadPage() {
   const budgetLeft = BUDGET - totalCost;
 
   function togglePlayer(player: Player) {
+    if (!canEdit) {
+      setError("لا يمكنك تعديل التشكيلة في جولة سابقة أو منتهية 🔒");
+      return;
+    }
+
     if (selectedIds.includes(player.id)) {
       setSelectedIds((prev) => prev.filter((id) => id !== player.id));
       if (captainId === player.id) setCaptainId(null);
@@ -93,10 +144,12 @@ export default function SquadPage() {
   }
 
   function toggleCaptain(playerId: number) {
+    if (!canEdit) return; // منع تغيير الكابتن في الجولات القديمة
     setCaptainId((prev) => (prev === playerId ? null : playerId));
   }
 
   async function saveSquad() {
+    if (!canEdit) return;
     if (selectedIds.length !== 5) { setError("Select exactly 5 players."); return; }
     if (!captainId) { setError("Please select a captain."); return; }
     if (!activeGW) { setError("No active gameweek found."); return; }
@@ -108,7 +161,9 @@ export default function SquadPage() {
         gameweek_id: activeGW.id,
       });
       setMessage(`Squad saved! Transfers: ${res.data.transfers_made}, Penalty: -${res.data.transfer_penalty}pts`);
-      loadData();
+      // تحديث الداتا الأساسية
+      const teamRes = await api.get("/teams/my");
+      setTeam(teamRes.data);
     } catch (err: any) {
       setError(err.response?.data?.detail || "Failed to save squad");
     } finally {
@@ -116,18 +171,17 @@ export default function SquadPage() {
     }
   }
 
-  // دالة فتح البوب-أب وجلب تفاصيل النقط
   async function handlePlayerClick(player: Player) {
     setInfoPlayer(player);
-    setPlayerBreakdown(null); // تفريغ الداتا القديمة
+    setPlayerBreakdown(null); 
     
-    if (activeGW) {
+    // هنجيب نقط الجولة المعروضة (سواء قديمة أو جديدة)
+    if (viewedGW) {
       setLoadingBreakdown(true);
       try {
-        const res = await api.get(`/gameweeks/${activeGW.id}/stats/${player.id}/breakdown`);
+        const res = await api.get(`/gameweeks/${viewedGW.id}/stats/${player.id}/breakdown`);
         setPlayerBreakdown(res.data);
       } catch (err) {
-        // لو مفيش إحصائيات لسه للاعب ده هيرجع 404
         setPlayerBreakdown({}); 
       } finally {
         setLoadingBreakdown(false);
@@ -143,9 +197,31 @@ export default function SquadPage() {
       <Navbar />
       <main className="md:ml-60 pb-20 md:pb-0 px-4 md:px-8 py-6">
         <div className="max-w-5xl mx-auto">
-          <div className="mb-6">
-            <h1 className="text-2xl font-bold">👥 Pick Your Squad</h1>
-            <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>Select 5 players within £50M. Choose a captain (2x points).</p>
+          
+          {/* الـ Header الجديد مع اختيار الجولة */}
+          <div className="mb-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold">👥 My Squad</h1>
+              <p className="text-sm mt-1" style={{ color: "var(--muted)" }}>Select 5 players within £50M. Choose a captain (2x points).</p>
+            </div>
+            
+            {/* Dropdown الجولات */}
+            {allGWs.length > 0 && (
+              <div className="flex items-center gap-2 bg-[#1a1a24] border border-white/10 rounded-lg px-3 py-1.5 shadow-lg">
+                <span className="text-sm font-semibold text-gray-400">Gameweek:</span>
+                <select 
+                  className="bg-transparent text-white font-bold outline-none cursor-pointer text-sm py-1"
+                  value={viewedGW?.id || ""}
+                  onChange={handleGWChange}
+                >
+                  {allGWs.map(gw => (
+                    <option key={gw.id} value={gw.id} className="bg-[#1a1a24] text-white">
+                      GW {gw.number} - {gw.name} {gw.id === activeGW?.id ? "(Active)" : ""}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
           </div>
 
           {message && (
@@ -172,10 +248,9 @@ export default function SquadPage() {
                     </span>
                   </div>
                   
-                  {/* ربطنا الضغطة على اللاعب في الملعب بالبوب-أب */}
                   <PitchView 
                     players={pitchPlayers} 
-                    onCaptainToggle={toggleCaptain} 
+                    onCaptainToggle={canEdit ? toggleCaptain : undefined} 
                     onPlayerClick={handlePlayerClick} 
                   />
 
@@ -198,33 +273,45 @@ export default function SquadPage() {
                     )}
                   </div>
 
-                  <button
-                    onClick={saveSquad}
-                    disabled={saving || selectedIds.length !== 5 || !captainId}
-                    className="btn-primary w-full py-3 mt-4 text-sm"
-                    style={{ opacity: (saving || selectedIds.length !== 5 || !captainId) ? 0.5 : 1, cursor: (saving || selectedIds.length !== 5 || !captainId) ? "not-allowed" : "pointer" }}
-                  >
-                    {saving ? "Saving..." : "Save Squad"}
-                  </button>
+                  {/* إخفاء زرار الحفظ وإظهار رسالة تحذير لو الجولة مقفولة */}
+                  {canEdit ? (
+                    <button
+                      onClick={saveSquad}
+                      disabled={saving || selectedIds.length !== 5 || !captainId}
+                      className="btn-primary w-full py-3 mt-4 text-sm"
+                      style={{ opacity: (saving || selectedIds.length !== 5 || !captainId) ? 0.5 : 1, cursor: (saving || selectedIds.length !== 5 || !captainId) ? "not-allowed" : "pointer" }}
+                    >
+                      {saving ? "Saving..." : "Save Squad"}
+                    </button>
+                  ) : (
+                    <div className="mt-4 p-3 rounded-lg text-center text-xs font-semibold" style={{ background: "rgba(245, 158, 11, 0.1)", color: "#f59e0b", border: "1px solid rgba(245, 158, 11, 0.2)" }}>
+                      🔒 Viewing past gameweek. Editing is disabled.
+                    </div>
+                  )}
                 </div>
               </div>
 
               <div className="md:col-span-3">
-                <div className="card p-4">
-                  <div className="flex items-center gap-2 mb-4 flex-wrap">
-                    {["ALL", "GK", "DEF", "MID", "ATT"].map((pos) => (
-                      <button
-                        key={pos}
-                        onClick={() => setFilterPos(pos)}
-                        className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
-                        style={{
-                          background: filterPos === pos ? (posColors[pos] || "var(--primary)") : "#2a2a3a",
-                          color: filterPos === pos ? "white" : "var(--muted)",
-                        }}
-                      >
-                        {pos}
-                      </button>
-                    ))}
+                <div className="card p-4" style={{ opacity: canEdit ? 1 : 0.6 }}>
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {["ALL", "GK", "DEF", "MID", "ATT"].map((pos) => (
+                        <button
+                          key={pos}
+                          onClick={() => setFilterPos(pos)}
+                          className="px-3 py-1.5 rounded-lg text-xs font-semibold transition-colors"
+                          style={{
+                            background: filterPos === pos ? (posColors[pos] || "var(--primary)") : "#2a2a3a",
+                            color: filterPos === pos ? "white" : "var(--muted)",
+                          }}
+                        >
+                          {pos}
+                        </button>
+                      ))}
+                    </div>
+                    {!canEdit && (
+                       <span className="text-xs text-yellow-500 font-bold px-2">Read Only Mode</span>
+                    )}
                   </div>
 
                   <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
@@ -237,13 +324,14 @@ export default function SquadPage() {
                       return (
                         <div
                           key={player.id}
-                          className="flex items-center gap-3 p-3 rounded-lg transition-colors cursor-pointer"
+                          className="flex items-center gap-3 p-3 rounded-lg transition-colors"
                           style={{
                             background: isSelected ? "rgba(56,255,126,0.08)" : "#1a1a24",
                             border: `1px solid ${isSelected ? "rgba(56,255,126,0.3)" : "var(--border)"}`,
-                            opacity: !canAfford && !isSelected ? 0.5 : 1,
+                            opacity: (!canAfford && !isSelected) ? 0.5 : 1,
+                            cursor: canEdit ? "pointer" : "default"
                           }}
-                          onClick={() => togglePlayer(player)}
+                          onClick={() => canEdit && togglePlayer(player)}
                         >
                           <div
                             className="w-10 h-10 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0 overflow-hidden border border-white/10"
@@ -278,7 +366,6 @@ export default function SquadPage() {
                               <div className="text-xs" style={{ color: "var(--muted)" }}>{player.total_points} pts</div>
                             </div>
                             
-                            {/* زرار الـ Info الجديد عشان لو عايز يشوف إحصائياته من القائمة */}
                             <button
                               onClick={(e) => { e.stopPropagation(); handlePlayerClick(player); }}
                               className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors text-sm"
@@ -304,7 +391,6 @@ export default function SquadPage() {
         </div>
       </main>
 
-      {/* الـ Modal (البوب-أب) بتاع تفاصيل اللاعب */}
       {infoPlayer && (
         <div 
           className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" 
@@ -344,8 +430,8 @@ export default function SquadPage() {
               </div>
             </div>
 
-            <h4 className="font-semibold text-[var(--primary)] mb-3 border-b border-white/10 pb-2">
-              Gameweek {activeGW?.number || "?"} Breakdown
+            <h4 className="font-semibold text-[var(--primary)] mb-3 border-b border-white/10 pb-2 flex justify-between">
+              <span>GW {viewedGW?.number || "?"} Breakdown</span>
             </h4>
 
             {loadingBreakdown ? (
