@@ -122,7 +122,7 @@ export default function LeaderboardPage() {
                     key={entry.rank}
                     onClick={() => setSelectedManager(entry.manager_name)}
                     className="card p-4 flex items-center gap-4 cursor-pointer hover:bg-white/5 transition-colors"
-                    style={isMe ? { border: "1px solid rgba(56,255,126,0.4)", background: "rgba(56,255,126,0.05)" } : {}}
+                    style={isMe ? { border: "2px solid rgba(56,255,126,0.85)", background: "rgba(56,255,126,0.08)", boxShadow: "0 0 0 2px rgba(56,255,126,0.15), 0 0 18px rgba(56,255,126,0.18)" } : {}}
                   >
                     <div className="w-10 text-center">
                       {entry.rank <= 3 ? (
