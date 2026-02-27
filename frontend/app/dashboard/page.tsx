@@ -33,6 +33,9 @@ export default function DashboardPage() {
   const [allGWs, setAllGWs] = useState<Gameweek[]>([]);
   const [availableTeamGWs, setAvailableTeamGWs] = useState<TeamGW[]>([]);
   const [currentViewIndex, setCurrentViewIndex] = useState<number>(0);
+  
+  // 🌟 إحصائيات الجولة المعروضة (عشان الباجات وفريم الـ MVP)
+  const [gwStats, setGwStats] = useState<any[]>([]);
 
   useEffect(() => {
     if (!isLoggedIn()) {
@@ -62,11 +65,9 @@ export default function DashboardPage() {
       const openVotingGW = allGwsRes.data.find((gw: Gameweek) => gw.is_voting_open);
       setVotingGW(openVotingGW || null);
 
-      // Collect previous gameweeks history
       let fetchedHistory = historyRes.data || [];
       let currentTGW = null;
 
-      // If there is an active gameweek, fetch your lineup for it and include it in history
       if (gwRes.data) {
         try {
           const tgwRes = await api.get(`/teams/my/gameweek/${gwRes.data.id}`);
@@ -76,17 +77,14 @@ export default function DashboardPage() {
         } catch {}
       }
 
-      // Merge historical gameweeks with current gameweek so arrows can navigate all
       let combined = [...fetchedHistory];
       if (currentTGW && !combined.find((x: any) => x.gameweek_id === currentTGW.gameweek_id)) {
         combined.push(currentTGW);
       }
 
-      // Sort gameweeks from oldest to newest based on gameweek id
       combined.sort((a: any, b: any) => (a.gameweek_id || 0) - (b.gameweek_id || 0));
       setAvailableTeamGWs(combined);
       
-      // Default to the latest gameweek view (last item in the array)
       if (combined.length > 0) {
         setCurrentViewIndex(combined.length - 1);
       }
@@ -97,23 +95,39 @@ export default function DashboardPage() {
     }
   }
 
-  // Resolve currently viewed gameweek based on arrow index
   const teamGW = availableTeamGWs[currentViewIndex] || null;
   const viewedGWInfo = allGWs.find(g => g.id === teamGW?.gameweek_id) || activeGW;
 
-  // Get players for the lineup shown in the currently viewed gameweek
+  useEffect(() => {
+    if (viewedGWInfo?.id) {
+      api.get(`/gameweeks/${viewedGWInfo.id}/stats`)
+        .then(res => setGwStats(res.data))
+        .catch(() => setGwStats([]));
+    }
+  }, [viewedGWInfo?.id]);
+
   function getSelectedPlayers() {
     if (!teamGW) return [];
     const ids = [teamGW.player1_id, teamGW.player2_id, teamGW.player3_id, teamGW.player4_id, teamGW.player5_id].filter(Boolean) as number[];
     return ids.map((id) => {
       const p = players.find((pl) => pl.id === id);
-      return p ? { player: p, isCaptain: id === teamGW.captain_id } : null;
-    }).filter(Boolean) as { player: Player; isCaptain: boolean }[];
+      const pStat = gwStats.find(s => s.player_id === id); 
+      return p ? { player: p, isCaptain: id === teamGW.captain_id, stat: pStat } : null;
+    }).filter(Boolean) as { player: Player; isCaptain: boolean; stat?: any }[];
   }
 
   const selectedPlayers = getSelectedPlayers();
 
-  // Arrow navigation handlers
+  // 🌟 استخراج اللعيبة اللي كسبوا الـ MVP في الجولة دي
+  const mvpPlayers = gwStats
+    .filter(stat => stat.mvp_rank > 0 && stat.mvp_rank <= 3)
+    .sort((a, b) => a.mvp_rank - b.mvp_rank)
+    .map(stat => {
+      const p = players.find(pl => pl.id === stat.player_id);
+      return { stat, player: p };
+    })
+    .filter(item => item.player); // نتأكد إن اللاعب موجود
+
   function handlePrevGW() {
     setCurrentViewIndex(prev => Math.max(0, prev - 1));
   }
@@ -148,7 +162,6 @@ export default function DashboardPage() {
                   <div className="text-4xl font-black gradient-text">{team?.total_points ?? 0}</div>
                 </div>
                 
-                {/* ── Gameweek points card + navigation arrows + vote button ── */}
                 <div className="card p-4 flex flex-col justify-between relative transition-all">
                   <div>
                     <div className="flex justify-between items-center mb-2">
@@ -156,14 +169,12 @@ export default function DashboardPage() {
                         {viewedGWInfo ? `${viewedGWInfo.name.toUpperCase()} POINTS` : "GAMEWEEK POINTS"}
                       </div>
                       
-                      {/* Navigation arrows between gameweeks */}
                       {availableTeamGWs.length > 1 && (
                         <div className="flex gap-1 bg-[#1a1a24] p-1 rounded-lg border border-white/5">
                           <button 
                             onClick={handlePrevGW}
                             disabled={currentViewIndex === 0}
                             className="w-7 h-7 flex items-center justify-center rounded bg-[#2a2a3a] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-all text-[10px]"
-                            title="Previous gameweek"
                           >
                             ◀
                           </button>
@@ -171,7 +182,6 @@ export default function DashboardPage() {
                             onClick={handleNextGW}
                             disabled={currentViewIndex === availableTeamGWs.length - 1}
                             className="w-7 h-7 flex items-center justify-center rounded bg-[#2a2a3a] text-white disabled:opacity-30 disabled:cursor-not-allowed hover:bg-white/10 transition-all text-[10px]"
-                            title="Next gameweek"
                           >
                             ▶
                           </button>
@@ -187,7 +197,6 @@ export default function DashboardPage() {
                     )}
                   </div>
                   
-                  {/* Vote button is shown only when voting is open by admin */}
                   {votingGW && (
                     <button
                       onClick={() => router.push("/vote")}
@@ -215,7 +224,7 @@ export default function DashboardPage() {
                 </button>
               </div>
 
-              <div className="md:col-span-2">
+              <div className="md:col-span-2 space-y-6">
                 <div className="card p-4 relative overflow-hidden">
                   <div className="flex items-center justify-between mb-4 relative z-10">
                     <div className="flex items-center gap-2">
@@ -233,16 +242,61 @@ export default function DashboardPage() {
                     )}
                   </div>
                   
-                  {/* Pitch view updates dynamically based on selected gameweek */}
                   <PitchView players={selectedPlayers} />
                 </div>
+
+                {/* ── 🌟 فريم الـ MVP الجديد ── */}
+                {mvpPlayers.length > 0 && (
+                  <div className="card p-5 border border-yellow-500/20 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
+                    <h3 className="font-black mb-4 flex items-center justify-center gap-2 text-lg text-center">
+                      <span className="text-2xl">👑</span> 
+                      {viewedGWInfo?.name} MVPs
+                    </h3>
+                    
+                    <div className="grid grid-cols-3 gap-3 md:gap-4">
+                      {mvpPlayers.map((item) => {
+                        const rank = Number(item.stat.mvp_rank);
+                        const configMapping: Record<number, { medal: string, color: string, bg: string, label: string }> = {
+                          1: { medal: "🥇", color: "#facc15", bg: "rgba(250,204,21,0.1)", label: "1ST" },
+                          2: { medal: "🥈", color: "#94a3b8", bg: "rgba(148,163,184,0.1)", label: "2ND" },
+                          3: { medal: "🥉", color: "#fb923c", bg: "rgba(251,146,60,0.1)", label: "3RD" },
+                        };
+                        const config = configMapping[rank] || configMapping[3]; // Fallback للحماية
+
+                        return (
+                          <div 
+                            key={item.player!.id} 
+                            className="flex flex-col items-center p-3 rounded-xl border relative overflow-hidden transition-transform hover:-translate-y-1"
+                            style={{ borderColor: `${config.color}40`, background: config.bg }}
+                          >
+                            <div className="text-3xl mb-1 filter drop-shadow-lg z-10">{config.medal}</div>
+                            
+                            <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden mb-2 border-2 z-10 bg-black" style={{ borderColor: config.color }}>
+                              <img src={item.player!.image_url || "/players/default.png"} alt={item.player!.name} className="w-full h-full object-cover" />
+                            </div>
+                            
+                            <div className="font-bold text-xs md:text-sm text-center w-full truncate z-10 text-white">
+                              {item.player!.name}
+                            </div>
+                            
+                            <div className="text-[10px] md:text-xs font-black mt-1 z-10" style={{ color: config.color }}>
+                              {item.stat.points} pts
+                            </div>
+
+                            {/* تأثير إضاءة خفيف في الخلفية */}
+                            <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: `radial-gradient(circle at center, ${config.color} 0%, transparent 70%)` }} />
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* ── HIGHLIGHTS WIDGETS ── */}
               {highlights?.show && (
                 <div className="grid md:grid-cols-2 gap-6 mt-2 md:col-span-3">
                   
-                  {/* Most Owned */}
                   {highlights.top_owned?.length > 0 && (
                     <div className="card p-4">
                       <h3 className="font-bold mb-3 flex items-center gap-2">🔥 Most Owned</h3>
@@ -266,7 +320,6 @@ export default function DashboardPage() {
                     </div>
                   )}
 
-                  {/* Top Scorers Last GW */}
                   {highlights.top_scorers?.length > 0 && (
                     <div className="card p-4">
                       <h3 className="font-bold mb-3 flex items-center gap-2">⭐ Top Scorers <span className="text-xs font-normal" style={{color: "var(--muted)"}}>({highlights.last_gw_name})</span></h3>
