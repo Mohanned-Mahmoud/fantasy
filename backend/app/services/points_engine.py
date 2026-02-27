@@ -190,7 +190,7 @@ def get_points_breakdown(stat: MatchStat, position: str) -> dict:
     # 🌟 توضيح عدد الماتشات اللي كسبها في تفصيلة الإحصائيات
     matches_won = getattr(stat, "matches_won", 0)
     if matches_won > 0 and config.get("win_bonus", 0) > 0:
-        breakdown[f"🎉 Matches Won ({matches_won}x)"] = matches_won * config["win_bonus"]
+        breakdown[f"🎉 Matches Won ({matches_won}x)"] = matches_won * config.get("win_bonus", 2) # ✅ الصح
         
     mvp_rank = getattr(stat, "mvp_rank", 0)
     if mvp_rank == 1: breakdown["🥇 MVP (1st Place)"] = 3

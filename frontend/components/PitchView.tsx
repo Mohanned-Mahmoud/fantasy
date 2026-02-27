@@ -29,9 +29,10 @@ const rowVerticalPosition: Record<string, string> = {
   ATT: "18%",
 };
 
+// تصميم الشكل الخماسي للباج
 const PENTAGON_CLIP = "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)";
 
-// 🌟 حساب الباجات في الفران إند بالشروط الصعبة اللي إنت حددتها
+// حساب الباجات في الفران إند بالشروط الـ "Hardcore"
 function getBadges(stat: any) {
   if (!stat) return [];
   const badges = [];
@@ -116,6 +117,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
       className="pitch-bg relative w-full rounded-xl select-none"
       style={{ paddingBottom: "140%", maxWidth: "360px", margin: "0 auto", overflow: "visible" }}
     >
+      {/* رسم خطوط الملعب */}
       <div className="absolute inset-0 overflow-hidden rounded-xl">
         <div className="absolute rounded-full border-2 border-white/10" style={{ top: "35%", left: "15%", width: "70%", height: "30%" }} />
         <div className="absolute border-b-2 border-white/10" style={{ top: "50%", left: "5%", right: "5%" }} />
@@ -123,6 +125,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
         <div className="absolute border-2 border-white/10" style={{ top: "4%", left: "20%", width: "60%", height: "18%" }} />
       </div>
 
+      {/* رص اللعيبة في أماكنهم */}
       {positioned.map((pp, idx) => {
         const badges = getBadges(pp.stat);
 
@@ -131,34 +134,41 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
             key={`${pp.player.id}-${idx}`}
             onClick={() => onPlayerClick?.(pp.player)}
             onTouchEnd={() => handlePlayerTouchEnd(pp.player.id)}
-            className="absolute flex flex-col items-center gap-1 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer transition-all duration-500 ease-in-out z-20 hover:z-50"
+            className="absolute flex flex-col items-center gap-1.5 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer transition-all duration-500 ease-in-out z-20 hover:z-50"
             style={{ top: pp.top, left: pp.left }}
           >
             <div className="relative">
               
-              {/* ── حاوية الباجات الخماسية ── */}
+              {/* ── 🌟 حاوية الباجات الخماسية الجديدة ── */}
               {badges.length > 0 && (
-                <div className="absolute -top-6 -right-6 flex -space-x-2 z-50">
+                // 1. خليناهم -top-2 و -right-2 عشان يلزقوا في كادر الصورة ويختفي الفراغ
+                // 2. صغرنا المسافة بينهم (-space-x-1.5)
+                <div className="absolute -top-2 -right-2 flex -space-x-1.5 z-50">
                   {badges.map((badge) => (
                     <div 
                       key={badge.id} 
-                      className="w-7 h-7 flex items-center justify-center bg-gradient-to-br from-yellow-200 to-yellow-600 shadow-[0_0_15px_rgba(0,0,0,0.8)] transform hover:scale-125 transition-transform"
+                      // 3. صغرنا الباج نفسه (w-6 h-6 بدل 7)
+                      // 4. صغرنا الـ shadow شوية عشان ميبقاش "معفّش"
+                      className="w-6 h-6 flex items-center justify-center bg-gradient-to-br from-yellow-200 to-yellow-600 shadow-[0_0_10px_rgba(0,0,0,0.8)] transform hover:scale-125 transition-transform"
                       style={{ clipPath: PENTAGON_CLIP }}
                       title={badge.title}
                     >
                       <div 
-                        className="w-[22px] h-[22px] flex items-center justify-center"
+                        // 5. خلينا الحاوية الداخلية أوسع (w-[19px] h-[19px]) عشان الفراغ الداخلي يقل
+                        className="w-[19px] h-[19px] flex items-center justify-center"
                         style={{ background: badge.bg, clipPath: PENTAGON_CLIP }}
                       >
-                        <span className="text-[11px] filter drop-shadow-md">{badge.emoji}</span>
+                        {/* 6. كبرنا اللوجو (text-[14px] بدل 11) عشان يبقى مالي الباج وواضح */}
+                        <span className="text-[14px] filter drop-shadow-md leading-none flex items-center justify-center">{badge.emoji}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
+              {/* الصورة الشخصية للاعب */}
               <div
-                className="w-14 h-14 rounded-full overflow-hidden shadow-lg border-2 transition-transform group-hover:scale-110 flex items-center justify-center bg-[#1a1a24] relative z-30"
+                className="w-14 h-14 rounded-full overflow-hidden shadow-xl border-2 transition-transform group-hover:scale-110 flex items-center justify-center bg-[#1a1a24] relative z-30"
                 style={{
                   borderColor: pp.isCaptain ? "#38ff7e" : "rgba(255,255,255,0.3)",
                   boxShadow: pp.isCaptain ? "0 0 15px rgba(56,255,126,0.5)" : undefined,
@@ -171,6 +181,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
                 )}
               </div>
               
+              {/* علامة الكابتن */}
               {pp.isCaptain && (
                 <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black z-40 shadow-md" style={{ background: "#38ff7e", color: "#0f0f13" }}>
                   C
@@ -178,6 +189,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
               )}
             </div>
 
+            {/* الاسم والنقط */}
             <div className="px-2 py-0.5 rounded text-[10px] font-semibold text-white max-w-[80px] truncate text-center shadow-sm relative z-30" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)" }}>
               {pp.player.name.split(" ").pop()}
             </div>
@@ -188,6 +200,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
               </div>
             )}
 
+            {/* زرار الكابتن في وضع التعديل */}
             {onCaptainToggle && (
               <button
                 type="button"
@@ -201,6 +214,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
         );
       })}
 
+      {/* شاشة "Build your lineup" لو الملعب فاضي */}
       {players.length === 0 && (
         <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px] rounded-xl">
           <div className="text-center">
