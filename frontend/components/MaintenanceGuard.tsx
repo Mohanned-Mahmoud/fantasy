@@ -96,8 +96,7 @@ export default function MaintenanceGuard({
             <div className="h-px w-full bg-gradient-to-r from-transparent via-white/15 to-transparent mb-8" />
             
             <p className="text-zinc-400 text-base md:text-lg leading-relaxed mb-8">
-              بنجهزلك أقوى تجربة <span className="text-white font-semibold">فانتسي خماسي</span>... <br/>
-              المهندس بتاعنا مريح شوية وهنرجع أقوى من الأول!
+             <span className="text-white font-semibold"></span>... <br/>
             </p>
 
             {/* Loading Dots */}
