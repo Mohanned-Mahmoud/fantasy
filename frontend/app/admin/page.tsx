@@ -152,7 +152,8 @@ export default function AdminPage() {
   const [players, setPlayers] = useState<Player[]>([]);
   const [gameweeks, setGameweeks] = useState<Gameweek[]>([]);
   const [showStats, setShowStats] = useState(false);
-  const [allowTransfers, setAllowTransfers] = useState(true); // <-- ضفنا الخاصية دي
+  const [allowTransfers, setAllowTransfers] = useState(true); 
+  const [maintenanceMode, setMaintenanceMode] = useState(false); // <-- ضفنا الخاصية دي
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -181,12 +182,13 @@ export default function AdminPage() {
       const [pRes, gRes, settingsRes] = await Promise.all([
         api.get("/players/"), 
         api.get("/gameweeks/"),
-        api.get("/stats/settings").catch(() => ({ data: { show_dashboard_stats: false, allow_transfers: true } }))
+        api.get("/stats/settings").catch(() => ({ data: { show_dashboard_stats: false, allow_transfers: true, maintenance_mode: false } }))
       ]);
       setPlayers(pRes.data);
       setGameweeks(gRes.data);
       setShowStats(settingsRes.data?.show_dashboard_stats || false);
-      setAllowTransfers(settingsRes.data?.allow_transfers ?? true); // <-- تحديث الحالة من الباك إند
+      setAllowTransfers(settingsRes.data?.allow_transfers ?? true); 
+      setMaintenanceMode(settingsRes.data?.maintenance_mode ?? false); // <-- تحديث الحالة من الباك إند
       
       const openGWs = gRes.data.filter((gw: Gameweek) => !gw.is_finished);
       const activeOpen = openGWs.find((gw: Gameweek) => gw.is_active) || openGWs[0];
@@ -251,7 +253,6 @@ export default function AdminPage() {
     }
   }
 
-  // <-- الدالة الجديدة للتحكم في قفل/فتح اللعبة -->
   async function toggleTransfers() {
     try {
       const newVal = !allowTransfers;
@@ -262,6 +263,18 @@ export default function AdminPage() {
       console.error("Settings Error:", err.response || err); 
       const errorMessage = err.response?.data?.detail || err.message || "Failed to update settings";
       flash(`Error: ${errorMessage}`, true);
+    }
+  }
+
+  // <-- الدالة الجديدة للتحكم في وضع الصيانة -->
+  async function toggleMaintenance() {
+    try {
+      const newVal = !maintenanceMode;
+      await api.put(`/stats/settings?maintenance_mode=${newVal}`);
+      setMaintenanceMode(newVal);
+      flash(newVal ? "⚠️ Maintenance mode is ON" : "✅ Maintenance mode is OFF");
+    } catch (err: any) {
+      flash("Failed to update maintenance setting", true);
     }
   }
 
@@ -536,7 +549,7 @@ export default function AdminPage() {
                               flexShrink: 0,
                               width: 30, height: 30,
                               borderRadius: 6,
-                              display: "flex", alignItems: "center", justifyContent: "center",
+                              display: "flex", alignItems: "center", justifyItems: "center",
                               fontSize: 8, fontWeight: 700,
                               cursor: "pointer",
                               border: `1.5px solid ${isSaved ? "rgba(74,222,128,.4)" : isCurrent ? "#4a6bde" : "#2a2a3a"}`,
@@ -714,6 +727,32 @@ export default function AdminPage() {
                       }}
                     >
                       {!allowTransfers ? "Locked (Unlock)" : "Unlocked (Lock)"}
+                    </button>
+                  </div>
+
+                  {/* ── قسم الصيانة الجديد ── */}
+                  <h2 className="font-semibold mb-2 mt-4">System Status</h2>
+                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", background: "#1a1a24", padding: "16px", borderRadius: "12px", border: "1px solid #2a2a3a" }}>
+                    <div>
+                      <div style={{ fontWeight: "bold", fontSize: "15px", color: maintenanceMode ? "#fbbf24" : "white" }}>
+                        Maintenance Mode
+                      </div>
+                      <div style={{ fontSize: "12px", color: "var(--muted)", marginTop: "4px" }}>
+                        Turn this ON to show the "Under Maintenance" page to all non-admin users.
+                      </div>
+                    </div>
+                    <button 
+                      onClick={toggleMaintenance}
+                      style={{
+                        padding: "8px 16px", borderRadius: "8px", fontWeight: "bold", fontSize: "13px",
+                        background: maintenanceMode ? "rgba(239,68,68,0.1)" : "rgba(56,255,126,0.1)",
+                        color: maintenanceMode ? "#ef4444" : "var(--primary)",
+                        border: `1px solid ${maintenanceMode ? "rgba(239,68,68,0.2)" : "rgba(56,255,126,0.2)"}`,
+                        cursor: "pointer",
+                        minWidth: "120px"
+                      }}
+                    >
+                      {maintenanceMode ? "Turn OFF" : "Turn ON"}
                     </button>
                   </div>
 

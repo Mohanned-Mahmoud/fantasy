@@ -66,6 +66,7 @@ class SystemSettings(SQLModel, table=True):
     id: Optional[int] = Field(default=1, primary_key=True)
     show_dashboard_stats: bool = Field(default=False)
     allow_transfers: bool = Field(default=True)  # <-- السطر الجديد
+    maintenance_mode: bool = Field(default=False)  # <-- السطر الجديد ده
 
 
 class FantasyTeam(SQLModel, table=True):

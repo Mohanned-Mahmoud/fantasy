@@ -22,6 +22,7 @@ def get_settings(session: Session = Depends(get_session)):
 def update_settings(
     show_stats: Optional[bool] = None, 
     allow_transfers: Optional[bool] = None, 
+    maintenance_mode: Optional[bool] = None, # <-- ضفنا دي هنا
     session: Session = Depends(get_session)
 ):
     settings = session.get(SystemSettings, 1)
@@ -29,13 +30,14 @@ def update_settings(
         settings = SystemSettings(id=1)
         session.add(settings)
     
-    # لو الأدمن بعت تعديل للإحصائيات
     if show_stats is not None:
         settings.show_dashboard_stats = show_stats
         
-    # لو الأدمن بعت تعديل لقفل/فتح التغييرات
     if allow_transfers is not None:
         settings.allow_transfers = allow_transfers
+        
+    if maintenance_mode is not None: # <-- وضيفنا الشرط ده
+        settings.maintenance_mode = maintenance_mode
         
     session.commit()
     return {"status": "success"}
