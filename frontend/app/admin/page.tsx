@@ -34,20 +34,44 @@ const defaultStats = (): Record<StatKey, number> =>
   Object.fromEntries(STAT_FIELDS.map(f => [f.key, f.key === "minutes_played" ? 120 : 0])) as Record<StatKey, number>;
 
 // تم تحديث حسبة النقاط التجريبية لتشمل ضربات الجزاء
-function calcPoints(stats: Record<StatKey, number>, mvp: boolean) {
-  return (
-    stats.goals * 3 +
-    stats.assists * 2 +
-    stats.clean_sheet * 1 +
-    stats.saves * 0.5 +
-    stats.nutmegs * 1 +
-    stats.own_goals * -2 +
-    stats.defensive_errors * -1 +
-    (stats.penalties_scored || 0) * 3 +
-    (stats.penalties_saved || 0) * 5 +
-    (stats.penalties_missed || 0) * -2 +
-    (mvp ? 3 : 0)
-  );
+// تم تحديث حسبة النقاط لتتطابق مع الـ POINTS_CONFIG الخاصة بالباك إند تماماً
+function calcPoints(stats: Record<StatKey, number>, mvp: boolean, position: string) {
+  let pts = 0;
+  const pos = position?.toUpperCase() || "ATT";
+
+  // نقطة المشاركة (لو الدقايق أكبر من صفر بياخد نقطة)
+  if ((stats.minutes_played || 0) > 0) pts += 1;
+
+  // الأهداف
+  if (pos === "GK") pts += stats.goals * 6;
+  else if (pos === "DEF" || pos === "MID") pts += stats.goals * 5;
+  else pts += stats.goals * 4; // ATT
+
+  // الأسيست
+  pts += stats.assists * 3;
+
+  // الكلين شيت
+  if (pos === "GK") pts += stats.clean_sheet * 5;
+  else if (pos === "DEF") pts += stats.clean_sheet * 3;
+  else if (pos === "MID") pts += stats.clean_sheet * 2;
+  else pts += stats.clean_sheet * 1; // ATT
+
+  // التصديات (نقطة لكل 3 تصديات للحارس)
+  if (pos === "GK") pts += Math.floor(stats.saves / 3);
+
+  // الكباري (الكوبري بـ 2)
+  pts += stats.nutmegs * 2;
+
+  // الباقي
+  pts += stats.own_goals * -2;
+  pts += stats.defensive_errors * -1;
+  pts += (stats.penalties_scored || 0) * 3;
+  pts += (stats.penalties_saved || 0) * 5;
+  pts += (stats.penalties_missed || 0) * -2;
+  pts += mvp ? 3 : 0;
+
+  // أقل حاجة سالب 10 زي الباك إند
+  return Math.max(pts, -10);
 }
 
 const POS_COLORS: Record<string, string> = {
@@ -304,7 +328,7 @@ export default function AdminPage() {
 
   function goToPlayer(idx: number) { setCurrentIdx(idx); setSessionDone(false); }
 
-  const pts = calcPoints(currentData.stats, currentData.mvp);
+  const pts = calcPoints(currentData.stats, currentData.mvp, currentPlayer?.position || "ATT");
   const activeGW = gameweeks.find(g => String(g.id) === statGWId);
   const tabs = ["players", "gameweeks", "stats", "settings"] as const;
 

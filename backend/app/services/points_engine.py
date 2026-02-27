@@ -2,68 +2,66 @@
 Fantasy 5-a-side Points Engine
 Calculates fantasy points based on real match events.
 """
-from app.models.models import MatchStat, Player
-
+from app.models.models import MatchStat
 
 POINTS_CONFIG = {
     "GK": {
-        "goal": 5,            
+        "goal": 6,            # إعجاز
         "assist": 3,
-        "clean_sheet": 3,     
-        "save_per_2": 1,      # نقطة لكل تصديين (زي الفرونت)
+        "clean_sheet": 5,     
+        "save_per_3": 1,      
         "defensive_error": -1,
         "own_goal": -2,
-        "played": 0,          # لغينا نقطة الحضور عشان تتطابق مع الفرونت
+        "played": 1,          # نقطة الحضور رجعت
         "mvp": 3,
-        "nutmeg": 1,          
+        "nutmeg": 2,          
         "penalty_scored": 3,
         "penalty_saved": 5,
         "penalty_miss": -2,
     },
     "DEF": {
-        "goal": 5,            
+        "goal": 5,            # الجول بـ 5 عشان نشجعه يزيد
         "assist": 3,
         "clean_sheet": 3,
-        "save_per_2": 0,
+        "save_per_3": 0,
         "defensive_error": -1,
         "own_goal": -2,
-        "played": 0,
+        "played": 1,
         "mvp": 3,
-        "nutmeg": 1,          
+        "nutmeg": 2,          
         "penalty_scored": 3,
         "penalty_saved": 5,   
         "penalty_miss": -2,
     },
     "MID": {
-        "goal": 4,            
+        "goal": 5,            # زي المدافع
         "assist": 3,
-        "clean_sheet": 1,     
-        "save_per_2": 0,
+        "clean_sheet": 2,     
+        "save_per_3": 0,
         "defensive_error": -1,
         "own_goal": -2,
-        "played": 0,
+        "played": 1,
         "mvp": 3,
-        "nutmeg": 1,
+        "nutmeg": 2,
         "penalty_scored": 3,
         "penalty_saved": 5,
         "penalty_miss": -2,
     },
     "ATT": {
-        "goal": 3,            
+        "goal": 4,            # رجعناه لـ 4 نقط عشان ياخد حقه لما يتألق ⚽
         "assist": 3,
-        "clean_sheet": 0,     
-        "save_per_2": 0,
+        "clean_sheet": 1,     # ولسه بياخد نقطة لما الفرقة تقفل ورا 🛡️
+        "save_per_3": 0,
         "defensive_error": -1,
         "own_goal": -2,
-        "played": 0,
+        "played": 1,
         "mvp": 3,
-        "nutmeg": 1,
+        "nutmeg": 2,
         "penalty_scored": 3,
         "penalty_saved": 5,
         "penalty_miss": -2,
     },
 }
-
 
 def calculate_player_points(stat: MatchStat, position: str) -> int:
     """
@@ -73,31 +71,42 @@ def calculate_player_points(stat: MatchStat, position: str) -> int:
     config = POINTS_CONFIG.get(pos, POINTS_CONFIG["ATT"])
     points = 0
 
+    # 1. نقطة الحضور (مجرد ما يشم النجيله)
     if (stat.minutes_played or 0) > 0:
         points += config["played"]
 
+    # 2. الأجوان العادية (كل مركز بتسعيرته)
     points += (stat.goals or 0) * config["goal"]
+    
+    # 3. أهداف ضربات الجزاء (نقاط ثابتة أقل من الجول العادي)
     points += getattr(stat, "penalties_scored", 0) * config["penalty_scored"]
+
+    # 4. الأسيست (صنايعي الأجوان)
     points += (stat.assists or 0) * config["assist"]
 
+    # 5. الكلين شيت (تقفيل ورا بمية ونور)
     if (stat.clean_sheet or 0) > 0:
         points += stat.clean_sheet * config["clean_sheet"]
 
-    save_points = ((stat.saves or 0) // 2) * config["save_per_2"]
+    # 6. التصديات (شغل الحراس - نقطة لكل 3)
+    save_points = ((stat.saves or 0) // 3) * config["save_per_3"]
     points += save_points
     
+    # 7. صد ضربات الجزاء (بونص عالي لو مش حارس)
     points += getattr(stat, "penalties_saved", 0) * config["penalty_saved"]
 
+    # 8. الخصومات والسوالب (أخطاء، أجوان عكسية، ضياع جزاء)
     points += (stat.defensive_errors or 0) * config["defensive_error"]
     points += (stat.own_goals or 0) * config["own_goal"]
     points += getattr(stat, "penalties_missed", 0) * config["penalty_miss"]
 
+    # 9. روقان الخماسي (نجم الماتش والكباري)
     if stat.mvp:
         points += config["mvp"]
-        
     points += (stat.nutmegs or 0) * config["nutmeg"]
 
-    return points
+    # أقل حاجة ممكن يوصلها اللعيب لو اليوم كان كارثي هي -10
+    return max(points, -10)
 
 
 def calculate_gameweek_team_points(
@@ -105,12 +114,6 @@ def calculate_gameweek_team_points(
     captain_id: int,
     transfer_penalty: int = 0,
 ) -> int:
-    """
-    Calculate total fantasy points for a team in a gameweek.
-    Doubles captain points. Applies transfer penalty.
-
-    player_stats: list of dicts with keys: player_id, position, stat (MatchStat)
-    """
     total = 0
     for item in player_stats:
         player_id = item["player_id"]
@@ -122,9 +125,6 @@ def calculate_gameweek_team_points(
 
 
 def get_points_breakdown(stat: MatchStat, position: str) -> dict:
-    """
-    Returns a detailed breakdown of how points were earned.
-    """
     pos = position.upper() if position else "ATT"
     config = POINTS_CONFIG.get(pos, POINTS_CONFIG["ATT"])
     breakdown = {}
@@ -146,8 +146,8 @@ def get_points_breakdown(stat: MatchStat, position: str) -> dict:
         breakdown[f"Clean Sheet ({stat.clean_sheet}x)"] = stat.clean_sheet * config["clean_sheet"]
         
     saves = stat.saves or 0
-    if (saves // 2) > 0 and config["save_per_2"] > 0:
-        breakdown[f"Saves ({saves}x)"] = (saves // 2) * config["save_per_2"]
+    if (saves // 3) > 0 and config["save_per_3"] > 0:
+        breakdown[f"Saves ({saves}x)"] = (saves // 3) * config["save_per_3"]
         
     pen_saved = getattr(stat, "penalties_saved", 0)
     if pen_saved > 0:
