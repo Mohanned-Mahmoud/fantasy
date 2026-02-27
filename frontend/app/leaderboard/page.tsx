@@ -21,6 +21,10 @@ export default function LeaderboardPage() {
   const [selectedManager, setSelectedManager] = useState<string | null>(null);
   const [viewedGWId, setViewedGWId] = useState<number | null>(null);
   const [managerTeam, setManagerTeam] = useState<any>(null);
+  
+  // 🌟 State جديدة عشان نحفظ فيها إحصائيات الجولة وتتعرض في الملعب
+  const [gwStats, setGwStats] = useState<any[]>([]); 
+  
   const [loadingTeam, setLoadingTeam] = useState(false);
   const [teamError, setTeamError] = useState("");
 
@@ -40,11 +44,9 @@ export default function LeaderboardPage() {
       setEntries(lbRes.data);
       setPlayers(plRes.data);
       
-      // بنفلتر الجولات وبناخد اللي خلصت بس
       const pastGws = gwRes.data.filter((g: Gameweek) => g.is_finished);
       setFinishedGWs(pastGws);
       
-      // بنخلي الجولة الديفولت هي أحدث جولة خلصت
       if (pastGws.length > 0) {
         const latest = pastGws.sort((a: Gameweek, b: Gameweek) => b.number - a.number)[0];
         setViewedGWId(latest.id);
@@ -56,7 +58,6 @@ export default function LeaderboardPage() {
     }
   }
 
-  // Effect لجلب تشكيلة المدرب لما نفتح البوب-أب أو نغير الجولة
   useEffect(() => {
     if (selectedManager && viewedGWId) {
       fetchManagerTeam(selectedManager, viewedGWId);
@@ -67,10 +68,18 @@ export default function LeaderboardPage() {
     setLoadingTeam(true);
     setTeamError("");
     setManagerTeam(null);
+    setGwStats([]); // تصفير الإحصائيات القديمة
+    
     try {
-      const res = await api.get(`/teams/user/${username}/gameweek/${gwId}`);
-      if (res.data && res.data.player1_id) {
-        setManagerTeam(res.data);
+      // 🌟 بنجيب التشكيلة والإحصائيات بتاعة الجولة دي مع بعض
+      const [teamRes, statsRes] = await Promise.all([
+        api.get(`/teams/user/${username}/gameweek/${gwId}`),
+        api.get(`/gameweeks/${gwId}/stats`).catch(() => ({ data: [] }))
+      ]);
+
+      if (teamRes.data && teamRes.data.player1_id) {
+        setManagerTeam(teamRes.data);
+        setGwStats(Array.isArray(statsRes.data) ? statsRes.data : []);
       } else {
         setTeamError("This manager hasn't selected a team for this gameweek 🤷‍♂️");
       }
@@ -81,14 +90,20 @@ export default function LeaderboardPage() {
     }
   }
 
-  // تجميع اللعيبة عشان يترسموا في الملعب
+  // 🌟 تجميع اللعيبة بالـ Stats بتاعتهم عشان يترسموا بنقطهم وباجاتهم في الملعب
   const pitchPlayers = [];
   if (managerTeam) {
     const ids = [managerTeam.player1_id, managerTeam.player2_id, managerTeam.player3_id, managerTeam.player4_id, managerTeam.player5_id].filter(Boolean);
     for (const id of ids) {
       const p = players.find(x => x.id === id);
+      const pStat = gwStats.find(s => Number(s.player_id) === Number(id)); // تدوير على نقط اللاعب
+      
       if (p) {
-        pitchPlayers.push({ player: p, isCaptain: p.id === managerTeam.captain_id });
+        pitchPlayers.push({ 
+          player: p, 
+          isCaptain: p.id === managerTeam.captain_id,
+          stat: pStat // 👈 بعتنا الـ Stat عشان الـ PitchView يعرض النقط والباجات
+        });
       }
     }
   }
@@ -171,7 +186,7 @@ export default function LeaderboardPage() {
           >
             <button 
               onClick={() => setSelectedManager(null)} 
-              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors"
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white transition-colors z-50"
             >
               ✕
             </button>
@@ -214,7 +229,7 @@ export default function LeaderboardPage() {
                     <span className="font-black text-[var(--primary)] text-lg">{managerTeam.gameweek_points}</span>
                   </div>
                   
-                  {/* عرض التشكيلة في الملعب */}
+                  {/* عرض التشكيلة في الملعب بالإحصائيات والباجات */}
                   <PitchView players={pitchPlayers} />
                 </div>
               ) : null}
