@@ -22,12 +22,12 @@ const posColors: Record<string, string> = {
   ATT: "#ef4444",
 };
 
-// 🌟 وسعنا المسافات بين الخطوط عشان نمنع التداخل (Overlap)
+// 🌟 التعديل السحري الأول: فردنا المسافات جداً بين الخطوط عشان مفيش لاعب يخبط في التاني
 const rowVerticalPosition: Record<string, string> = {
-  GK: "88%",
-  DEF: "66%",
-  MID: "41%",
-  ATT: "16%",
+  GK: "89%",
+  DEF: "63%",
+  MID: "37%",
+  ATT: "11%",
 };
 
 const PENTAGON_CLIP = "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)";
@@ -112,12 +112,16 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
     Object.entries(groups).forEach(([pos, pps]) => {
       const count = pps.length;
       const top = rowVerticalPosition[pos];
+
       pps.forEach((pp, index) => {
         let left = "50%"; 
-        if (count > 1) left = `${(index + 1) * (100 / (count + 1))}%`;
+        if (count > 1) {
+          left = `${(index + 1) * (100 / (count + 1))}%`;
+        }
         result.push({ ...pp, top, left, label: pos });
       });
     });
+
     return result;
   };
 
@@ -126,7 +130,8 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
   return (
     <div
       className="pitch-bg relative w-full rounded-xl select-none"
-      style={{ paddingBottom: "140%", maxWidth: "360px", margin: "0 auto", overflow: "visible" }}
+      // 🌟 التعديل السحري التاني: طولنا الملعب شوية (155% بدل 140%) عشان يدي مساحة بالطول للعيبة تفرد براحتها
+      style={{ paddingBottom: "155%", maxWidth: "360px", margin: "0 auto", overflow: "visible" }}
     >
       <div className="absolute inset-0 overflow-hidden rounded-xl">
         <div className="absolute rounded-full border-2 border-white/10" style={{ top: "35%", left: "15%", width: "70%", height: "30%" }} />
