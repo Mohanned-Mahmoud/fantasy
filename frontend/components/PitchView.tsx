@@ -31,7 +31,7 @@ const rowVerticalPosition: Record<string, string> = {
 
 const PENTAGON_CLIP = "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)";
 
-// تأمين الأرقام كلها بـ Number عشان متضربش لو راجعة String
+// الدالة المسؤولة عن حسبة الباجات وتأمين الأرقام
 function getBadges(stat: any) {
   if (!stat) return [];
   const badges = [];
@@ -113,10 +113,10 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
 
   return (
     <div
-      className="pitch-bg relative w-full rounded-xl overflow-hidden select-none"
-      style={{ paddingBottom: "140%", maxWidth: "360px", margin: "0 auto" }}
+      className="pitch-bg relative w-full rounded-xl select-none"
+      style={{ paddingBottom: "140%", maxWidth: "360px", margin: "0 auto", overflow: "visible" }} // شيلنا الـ overflow-hidden عشان الباجات تبان براحتها
     >
-      <div className="absolute inset-0">
+      <div className="absolute inset-0 overflow-hidden rounded-xl">
         <div className="absolute rounded-full border-2 border-white/10" style={{ top: "35%", left: "15%", width: "70%", height: "30%" }} />
         <div className="absolute border-b-2 border-white/10" style={{ top: "50%", left: "5%", right: "5%" }} />
         <div className="absolute border-2 border-white/10" style={{ top: "78%", left: "20%", width: "60%", height: "18%" }} />
@@ -131,25 +131,26 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
             key={`${pp.player.id}-${idx}`}
             onClick={() => onPlayerClick?.(pp.player)}
             onTouchEnd={() => handlePlayerTouchEnd(pp.player.id)}
-            className="absolute flex flex-col items-center gap-1 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer transition-all duration-500 ease-in-out"
-            style={{ top: pp.top, left: pp.left, zIndex: 10 }}
+            className="absolute flex flex-col items-center gap-1 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer transition-all duration-500 ease-in-out z-20 hover:z-50"
+            style={{ top: pp.top, left: pp.left }}
           >
             <div className="relative">
               
+              {/* ── حاوية الباجات الخماسية ── */}
               {badges.length > 0 && (
-                <div className="absolute -top-4 -right-4 flex -space-x-2 z-40">
+                <div className="absolute -top-6 -right-6 flex -space-x-2 z-50">
                   {badges.map((badge) => (
                     <div 
                       key={badge.id} 
-                      className="w-6 h-6 flex items-center justify-center bg-gradient-to-br from-yellow-200 to-yellow-600 shadow-[0_0_10px_rgba(0,0,0,0.5)] transform hover:scale-125 transition-transform"
+                      className="w-7 h-7 flex items-center justify-center bg-gradient-to-br from-yellow-200 to-yellow-600 shadow-[0_0_15px_rgba(0,0,0,0.8)] transform hover:scale-125 transition-transform"
                       style={{ clipPath: PENTAGON_CLIP }}
                       title={badge.title}
                     >
                       <div 
-                        className="w-[20px] h-[20px] flex items-center justify-center"
+                        className="w-[22px] h-[22px] flex items-center justify-center"
                         style={{ background: badge.bg, clipPath: PENTAGON_CLIP }}
                       >
-                        <span className="text-[10px] filter drop-shadow-md">{badge.emoji}</span>
+                        <span className="text-[11px] filter drop-shadow-md">{badge.emoji}</span>
                       </div>
                     </div>
                   ))}
@@ -157,7 +158,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
               )}
 
               <div
-                className="w-14 h-14 rounded-full overflow-hidden shadow-lg border-2 transition-transform group-hover:scale-110 flex items-center justify-center bg-[#1a1a24]"
+                className="w-14 h-14 rounded-full overflow-hidden shadow-lg border-2 transition-transform group-hover:scale-110 flex items-center justify-center bg-[#1a1a24] relative z-30"
                 style={{
                   borderColor: pp.isCaptain ? "#38ff7e" : "rgba(255,255,255,0.3)",
                   boxShadow: pp.isCaptain ? "0 0 15px rgba(56,255,126,0.5)" : undefined,
@@ -171,19 +172,19 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
               </div>
               
               {pp.isCaptain && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black z-20 shadow-md" style={{ background: "#38ff7e", color: "#0f0f13" }}>
+                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black z-40 shadow-md" style={{ background: "#38ff7e", color: "#0f0f13" }}>
                   C
                 </div>
               )}
             </div>
 
-            <div className="px-2 py-0.5 rounded text-[10px] font-semibold text-white max-w-[80px] truncate text-center shadow-sm" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)" }}>
+            <div className="px-2 py-0.5 rounded text-[10px] font-semibold text-white max-w-[80px] truncate text-center shadow-sm relative z-30" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)" }}>
               {pp.player.name.split(" ").pop()}
             </div>
 
             {pp.stat && (
-              <div className="text-[9px] font-black text-yellow-400 bg-black/60 px-1.5 py-0.5 rounded shadow-lg border border-yellow-400/20">
-                {pp.stat.points} pts
+              <div className="text-[9px] font-black text-yellow-400 bg-black/80 px-1.5 py-0.5 rounded shadow-lg border border-yellow-400/20 relative z-30">
+                {pp.stat.points ?? 0} pts
               </div>
             )}
 
@@ -191,7 +192,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
               <button
                 type="button"
                 onClick={(e) => { e.stopPropagation(); onCaptainToggle(pp.player.id); }}
-                className="text-[9px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity mt-1 bg-white/10 hover:bg-white/20 text-white border border-white/20"
+                className="text-[9px] px-2 py-0.5 rounded opacity-0 group-hover:opacity-100 transition-opacity mt-1 bg-white/10 hover:bg-white/20 text-white border border-white/20 relative z-30"
               >
                 {pp.isCaptain ? "Captain ✓" : "Set C"}
               </button>
@@ -201,7 +202,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
       })}
 
       {players.length === 0 && (
-        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px]">
+        <div className="absolute inset-0 flex items-center justify-center bg-black/20 backdrop-blur-[2px] rounded-xl">
           <div className="text-center">
             <div className="text-4xl mb-2 opacity-50">🏟️</div>
             <div className="text-sm font-medium text-white/60">Build your lineup</div>

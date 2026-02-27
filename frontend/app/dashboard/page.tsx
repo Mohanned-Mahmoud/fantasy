@@ -84,7 +84,6 @@ export default function DashboardPage() {
       combined.sort((a: any, b: any) => (a.gameweek_id || 0) - (b.gameweek_id || 0));
       setAvailableTeamGWs(combined);
       
-      // 🌟 رجعناها تفتح على آخر إندكس (الجولة الحالية الجديدة)
       if (combined.length > 0) {
         setCurrentViewIndex(combined.length - 1);
       }
@@ -113,7 +112,6 @@ export default function DashboardPage() {
     const ids = [teamGW.player1_id, teamGW.player2_id, teamGW.player3_id, teamGW.player4_id, teamGW.player5_id].filter(Boolean) as number[];
     return ids.map((id) => {
       const p = players.find((pl) => pl.id === id);
-      // تأمين المقارنة بـ Number عشان لو الداتا راجعة بشكل مختلف
       const pStat = gwStats.find(s => Number(s.player_id) === Number(id)); 
       return p ? { player: p, isCaptain: id === teamGW.captain_id, stat: pStat } : null;
     }).filter(Boolean) as { player: Player; isCaptain: boolean; stat?: any }[];
@@ -236,6 +234,8 @@ export default function DashboardPage() {
                           {viewedGWInfo.name}
                         </span>
                       )}
+                      {/* عداد الإحصائيات الخفي للتأكد إن الداتا بتوصل */}
+                      <span className="text-[9px] text-gray-600">({gwStats.length} stats)</span>
                     </div>
                     {team?.name && (
                       <span className="text-xs px-2 py-1 rounded" style={{ background: "rgba(56,255,126,0.1)", color: "var(--primary)" }}>
@@ -244,9 +244,11 @@ export default function DashboardPage() {
                     )}
                   </div>
                   
+                  {/* هنا بنبعت اللعيبة بالإحصائيات للملعب */}
                   <PitchView players={selectedPlayers} />
                 </div>
 
+                {/* ── فريم الـ MVP ── */}
                 {mvpPlayers.length > 0 && (
                   <div className="card p-5 border border-yellow-500/20 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
                     <h3 className="font-black mb-4 flex items-center justify-center gap-2 text-lg text-center">
@@ -271,19 +273,15 @@ export default function DashboardPage() {
                             style={{ borderColor: `${config.color}40`, background: config.bg }}
                           >
                             <div className="text-3xl mb-1 filter drop-shadow-lg z-10">{config.medal}</div>
-                            
                             <div className="w-12 h-12 md:w-16 md:h-16 rounded-full overflow-hidden mb-2 border-2 z-10 bg-black" style={{ borderColor: config.color }}>
                               <img src={item.player!.image_url || "/players/default.png"} alt={item.player!.name} className="w-full h-full object-cover" />
                             </div>
-                            
                             <div className="font-bold text-xs md:text-sm text-center w-full truncate z-10 text-white">
                               {item.player!.name}
                             </div>
-                            
                             <div className="text-[10px] md:text-xs font-black mt-1 z-10" style={{ color: config.color }}>
-                              {item.stat.points} pts
+                              {item.stat.points ?? 0} pts
                             </div>
-
                             <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: `radial-gradient(circle at center, ${config.color} 0%, transparent 70%)` }} />
                           </div>
                         );
@@ -301,17 +299,9 @@ export default function DashboardPage() {
                       <div className="space-y-3">
                         {highlights.top_owned.map((item: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: "#1a1a24" }}>
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
-                              <img src={item.player.image_url} alt="" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-bold text-sm">{item.player.name}</div>
-                              <div className="text-xs" style={{ color: "var(--muted)" }}>{item.player.team_name}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-black text-blue-400">{item.ownership_percent}%</div>
-                              <div className="text-[10px]" style={{ color: "var(--muted)" }}>TSB</div>
-                            </div>
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0"><img src={item.player.image_url} alt="" className="w-full h-full object-cover" /></div>
+                            <div className="flex-1"><div className="font-bold text-sm">{item.player.name}</div><div className="text-xs" style={{ color: "var(--muted)" }}>{item.player.team_name}</div></div>
+                            <div className="text-right"><div className="text-sm font-black text-blue-400">{item.ownership_percent}%</div><div className="text-[10px]" style={{ color: "var(--muted)" }}>TSB</div></div>
                           </div>
                         ))}
                       </div>
@@ -324,17 +314,9 @@ export default function DashboardPage() {
                       <div className="space-y-3">
                         {highlights.top_scorers.map((item: any, idx: number) => (
                           <div key={idx} className="flex items-center gap-3 p-2 rounded-lg" style={{ background: "#1a1a24" }}>
-                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0">
-                              <img src={item.player.image_url} alt="" className="w-full h-full object-cover" />
-                            </div>
-                            <div className="flex-1">
-                              <div className="font-bold text-sm">{item.player.name}</div>
-                              <div className="text-xs" style={{ color: "var(--muted)" }}>{item.player.position}</div>
-                            </div>
-                            <div className="text-right">
-                              <div className="text-sm font-black gradient-text">{item.points}</div>
-                              <div className="text-[10px]" style={{ color: "var(--muted)" }}>pts</div>
-                            </div>
+                            <div className="w-10 h-10 rounded-lg overflow-hidden bg-gray-700 flex-shrink-0"><img src={item.player.image_url} alt="" className="w-full h-full object-cover" /></div>
+                            <div className="flex-1"><div className="font-bold text-sm">{item.player.name}</div><div className="text-xs" style={{ color: "var(--muted)" }}>{item.player.position}</div></div>
+                            <div className="text-right"><div className="text-sm font-black gradient-text">{item.points}</div><div className="text-[10px]" style={{ color: "var(--muted)" }}>pts</div></div>
                           </div>
                         ))}
                       </div>
