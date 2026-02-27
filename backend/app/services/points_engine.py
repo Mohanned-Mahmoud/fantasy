@@ -117,10 +117,16 @@ def calculate_player_points(stat: MatchStat, position: str) -> int:
     points += (stat.defensive_errors or 0) * config["defensive_error"]
     points += (stat.own_goals or 0) * config["own_goal"]
     points += getattr(stat, "penalties_missed", 0) * config["penalty_miss"]
+    
+    # 🌟 إضافة نقط عدد الماتشات اللي كسبها (كل ماتش بـ 2 نقطة)
+    matches_won = getattr(stat, "matches_won", 0)
+    points += matches_won * config.get("win_bonus", 2)
 
-    # 9. روقان الخماسي (نجم الماتش والكباري)
-    if stat.mvp:
-        points += config["mvp"]
+    mvp_rank = getattr(stat, "mvp_rank", 0)
+    if mvp_rank == 1: points += 3
+    elif mvp_rank == 2: points += 2
+    elif mvp_rank == 3: points += 1
+        
     points += (stat.nutmegs or 0) * config["nutmeg"]
 
     # أقل حاجة ممكن يوصلها اللعيب لو اليوم كان كارثي هي -10
@@ -180,9 +186,16 @@ def get_points_breakdown(stat: MatchStat, position: str) -> dict:
     pen_missed = getattr(stat, "penalties_missed", 0)
     if pen_missed > 0:
         breakdown[f"Penalty Missed ({pen_missed}x)"] = pen_missed * config["penalty_miss"]
+    
+    # 🌟 توضيح عدد الماتشات اللي كسبها في تفصيلة الإحصائيات
+    matches_won = getattr(stat, "matches_won", 0)
+    if matches_won > 0 and config.get("win_bonus", 0) > 0:
+        breakdown[f"🎉 Matches Won ({matches_won}x)"] = matches_won * config["win_bonus"]
         
-    if stat.mvp:
-        breakdown["MVP Award"] = config["mvp"]
+    mvp_rank = getattr(stat, "mvp_rank", 0)
+    if mvp_rank == 1: breakdown["🥇 MVP (1st Place)"] = 3
+    elif mvp_rank == 2: breakdown["🥈 MVP (2nd Place)"] = 2
+    elif mvp_rank == 3: breakdown["🥉 MVP (3rd Place)"] = 1
         
     if (stat.nutmegs or 0) > 0 and config["nutmeg"] > 0:
         breakdown[f"Nutmegs/Skills ({stat.nutmegs}x)"] = stat.nutmegs * config["nutmeg"]

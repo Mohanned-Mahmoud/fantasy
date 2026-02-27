@@ -8,10 +8,11 @@ import api, { Player, Gameweek } from "@/lib/api";
 
 const POSITIONS = ["GK", "DEF", "MID", "ATT"];
 
-// تم إضافة إحصائيات ضربات الجزاء هنا لتعمل مع التصميم العبقري بتاعك
+// تم إضافة إحصائيات ضربات الجزاء و Matches Won هنا لتعمل مع التصميم العبقري بتاعك
 const STAT_FIELDS = [
   { key: "goals",            label: "Goals",       shortLabel: "Goals",   icon: "⚽", color: "#4ade80", max: 10,  step: 1 },
   { key: "assists",          label: "Assists",      shortLabel: "Assists",   icon: "🅰️", color: "#60a5fa", max: 10,  step: 1 },
+  { key: "matches_won",      label: "Matches Won",  shortLabel: "Wins", icon: "🎉", color: "#3b82f6", max: 15,  step: 1 }, // عداد الماتشات اللي كسبها
   { key: "clean_sheet",      label: "Clean Sheet",  shortLabel: "Clean Sheet",  icon: "🛡️", color: "#a78bfa", max: 5,   step: 1 },
   { key: "saves",            label: "Saves",        shortLabel: "Saves",  icon: "🧤", color: "#facc15", max: 20,  step: 1 },
   { key: "defensive_errors", label: "Def. Errors",  shortLabel: "Def. Errors",  icon: "⚠️", color: "#fb923c", max: 5,   step: 1 },
@@ -27,25 +28,24 @@ type StatKey = typeof STAT_FIELDS[number]["key"];
 
 interface PlayerStats {
   stats: Record<StatKey, number>;
-  mvp: boolean;
+  mvp_rank: number; 
 }
 
 const defaultStats = (): Record<StatKey, number> =>
   Object.fromEntries(STAT_FIELDS.map(f => [f.key, f.key === "minutes_played" ? 120 : 0])) as Record<StatKey, number>;
 
-// تم تحديث حسبة النقاط التجريبية لتشمل ضربات الجزاء
-// تم تحديث حسبة النقاط لتتطابق مع الـ POINTS_CONFIG الخاصة بالباك إند تماماً
-function calcPoints(stats: Record<StatKey, number>, mvp: boolean, position: string) {
+// تم تحديث حسبة النقاط التجريبية لتشمل ضربات الجزاء وتصويت الـ MVP وعدد الماتشات اللي كسبها
+function calcPoints(stats: Record<StatKey, number>, mvp_rank: number, position: string) {
   let pts = 0;
   const pos = position?.toUpperCase() || "ATT";
 
-  // نقطة المشاركة (لو الدقايق أكبر من صفر بياخد نقطة)
+  // نقطة المشاركة
   if ((stats.minutes_played || 0) > 0) pts += 1;
 
   // الأهداف
   if (pos === "GK") pts += stats.goals * 6;
   else if (pos === "DEF" || pos === "MID") pts += stats.goals * 5;
-  else pts += stats.goals * 4; // ATT
+  else pts += stats.goals * 4;
 
   // الأسيست
   pts += stats.assists * 3;
@@ -54,12 +54,12 @@ function calcPoints(stats: Record<StatKey, number>, mvp: boolean, position: stri
   if (pos === "GK") pts += stats.clean_sheet * 5;
   else if (pos === "DEF") pts += stats.clean_sheet * 3;
   else if (pos === "MID") pts += stats.clean_sheet * 2;
-  else pts += stats.clean_sheet * 1; // ATT
+  else pts += stats.clean_sheet * 1;
 
-  // التصديات (نقطة لكل 3 تصديات للحارس)
+  // التصديات
   if (pos === "GK") pts += Math.floor(stats.saves / 3);
 
-  // الكباري (الكوبري بـ 2)
+  // الكباري
   pts += stats.nutmegs * 2;
 
   // الباقي
@@ -68,9 +68,15 @@ function calcPoints(stats: Record<StatKey, number>, mvp: boolean, position: stri
   pts += (stats.penalties_scored || 0) * 3;
   pts += (stats.penalties_saved || 0) * 5;
   pts += (stats.penalties_missed || 0) * -2;
-  pts += mvp ? 3 : 0;
+  
+  // بونص المكسب (عدد الماتشات × 2 نقطة)
+  pts += (stats.matches_won || 0) * 2;
+  
+  // البونص بتاع الـ MVP
+  if (mvp_rank === 1) pts += 3;
+  else if (mvp_rank === 2) pts += 2;
+  else if (mvp_rank === 3) pts += 1;
 
-  // أقل حاجة سالب 10 زي الباك إند
   return Math.max(pts, -10);
 }
 
@@ -153,7 +159,7 @@ export default function AdminPage() {
   const [gameweeks, setGameweeks] = useState<Gameweek[]>([]);
   const [showStats, setShowStats] = useState(false);
   const [allowTransfers, setAllowTransfers] = useState(true); 
-  const [maintenanceMode, setMaintenanceMode] = useState(false); // <-- ضفنا الخاصية دي
+  const [maintenanceMode, setMaintenanceMode] = useState(false);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
@@ -161,7 +167,6 @@ export default function AdminPage() {
   const [newPlayer, setNewPlayer] = useState({ name: "", position: "GK", team_name: "", price: "5.0", image_url: "" });
   const [newGW, setNewGW] = useState({ number: "", name: "", deadline: "" });
 
-  // Stats tab state
   const [statGWId, setStatGWId] = useState("");
   const [currentIdx, setCurrentIdx] = useState(0);
   const [statsMap, setStatsMap] = useState<Record<string, PlayerStats>>({});
@@ -188,7 +193,7 @@ export default function AdminPage() {
       setGameweeks(gRes.data);
       setShowStats(settingsRes.data?.show_dashboard_stats || false);
       setAllowTransfers(settingsRes.data?.allow_transfers ?? true); 
-      setMaintenanceMode(settingsRes.data?.maintenance_mode ?? false); // <-- تحديث الحالة من الباك إند
+      setMaintenanceMode(settingsRes.data?.maintenance_mode ?? false); 
       
       const openGWs = gRes.data.filter((gw: Gameweek) => !gw.is_finished);
       const activeOpen = openGWs.find((gw: Gameweek) => gw.is_active) || openGWs[0];
@@ -240,6 +245,16 @@ export default function AdminPage() {
     } catch (err: any) { flash(err.response?.data?.detail || "Failed to calculate points", true); }
   }
 
+  async function toggleVoting(id: number) {
+    try {
+      const res = await api.put(`/gameweeks/${id}/toggle-voting`);
+      flash(res.data.message);
+      loadData();
+    } catch (err: any) {
+      flash("Failed to toggle voting status", true);
+    }
+  }
+
   async function toggleDashboardStats() {
     try {
       const newVal = !showStats;
@@ -248,8 +263,7 @@ export default function AdminPage() {
       flash(newVal ? "Stats are now VISIBLE to users" : "Stats are HIDDEN from users");
     } catch (err: any) {
       console.error("Settings Error:", err.response || err); 
-      const errorMessage = err.response?.data?.detail || err.message || "Failed to update settings";
-      flash(`Error: ${errorMessage}`, true);
+      flash("Failed to update settings", true);
     }
   }
 
@@ -260,13 +274,10 @@ export default function AdminPage() {
       setAllowTransfers(newVal);
       flash(newVal ? "Transfers are now UNLOCKED" : "Transfers are now LOCKED for everyone");
     } catch (err: any) {
-      console.error("Settings Error:", err.response || err); 
-      const errorMessage = err.response?.data?.detail || err.message || "Failed to update settings";
-      flash(`Error: ${errorMessage}`, true);
+      flash("Failed to update settings", true);
     }
   }
 
-  // <-- الدالة الجديدة للتحكم في وضع الصيانة -->
   async function toggleMaintenance() {
     try {
       const newVal = !maintenanceMode;
@@ -278,27 +289,22 @@ export default function AdminPage() {
     }
   }
 
-  // Stats queue logic
   const queuePlayers = players.filter(p =>
     p.name.toLowerCase().includes(playerSearch.toLowerCase())
   );
   const currentPlayer = queuePlayers[currentIdx];
-  const currentData: PlayerStats = statsMap[currentPlayer?.id] || { stats: defaultStats(), mvp: false };
+  const currentData: PlayerStats = statsMap[currentPlayer?.id] || { stats: defaultStats(), mvp_rank: 0 };
 
   const setCurrentPlayerStats = useCallback((updater: (d: PlayerStats) => PlayerStats) => {
     if (!currentPlayer) return;
     setStatsMap(prev => {
-      const existing = prev[currentPlayer.id] || { stats: defaultStats(), mvp: false };
+      const existing = prev[currentPlayer.id] || { stats: defaultStats(), mvp_rank: 0 };
       return { ...prev, [currentPlayer.id]: updater(existing) };
     });
   }, [currentPlayer]);
 
   const setStat = useCallback((key: StatKey, val: number) => {
     setCurrentPlayerStats(d => ({ ...d, stats: { ...d.stats, [key]: val } }));
-  }, [setCurrentPlayerStats]);
-
-  const toggleMvp = useCallback(() => {
-    setCurrentPlayerStats(d => ({ ...d, mvp: !d.mvp }));
   }, [setCurrentPlayerStats]);
 
   function restartSession() {
@@ -315,7 +321,7 @@ export default function AdminPage() {
       const payload = {
         player_id: currentPlayer.id, 
         ...Object.fromEntries(STAT_FIELDS.map(f => [f.key, currentData.stats[f.key] || 0])),
-        mvp: currentData.mvp,
+        mvp_rank: currentData.mvp_rank,
       };
       await api.post(`/gameweeks/${statGWId}/stats`, payload);
       setSavedIds(prev => new Set([...prev, String(currentPlayer.id)]));
@@ -326,8 +332,7 @@ export default function AdminPage() {
       else setCurrentIdx(nextIdx);
     } catch (err: any) {
       console.error("Save Stats Error:", err.response?.data || err);
-      const errorMessage = err.response?.data?.detail || err.message || "Failed to save stats";
-      flash(`Error: ${errorMessage}`, true);
+      flash("Failed to save stats", true);
     } finally {
       setSavingStat(false);
     }
@@ -341,7 +346,7 @@ export default function AdminPage() {
 
   function goToPlayer(idx: number) { setCurrentIdx(idx); setSessionDone(false); }
 
-  const pts = calcPoints(currentData.stats, currentData.mvp, currentPlayer?.position || "ATT");
+  const pts = calcPoints(currentData.stats, currentData.mvp_rank, currentPlayer?.position || "ATT");
   const activeGW = gameweeks.find(g => String(g.id) === statGWId);
   const tabs = ["players", "gameweeks", "stats", "settings"] as const;
 
@@ -373,7 +378,6 @@ export default function AdminPage() {
             </div>
           )}
 
-          {/* Tabs */}
           <div className="flex gap-2 mb-6">
             {tabs.map((tab) => (
               <button key={tab} onClick={() => setActiveTab(tab)}
@@ -466,27 +470,47 @@ export default function AdminPage() {
                     <h2 className="font-semibold mb-3">Gameweeks</h2>
                     <div className="space-y-2">
                       {gameweeks.map((gw) => (
-                        <div key={gw.id} className="flex items-center gap-3 p-3 rounded-lg" style={{ background: "#1a1a24" }}>
-                          <div className="flex-1">
-                            <div className="font-medium text-sm">
-                              {gw.name}
-                              {gw.is_finished && <span className="ml-2 text-[10px] text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">FINISHED</span>}
+                        <div key={gw.id} className="flex flex-col gap-3 p-3 rounded-lg" style={{ background: "#1a1a24" }}>
+                          
+                          <div className="flex items-center justify-between">
+                            <div className="flex-1">
+                              <div className="font-medium text-sm flex items-center gap-2">
+                                {gw.name}
+                                {gw.is_finished && <span className="text-[10px] text-gray-500 bg-gray-800 px-1.5 py-0.5 rounded">FINISHED</span>}
+                                {gw.is_voting_open && <span className="text-[10px] text-yellow-400 bg-yellow-400/10 border border-yellow-400/20 px-1.5 py-0.5 rounded">VOTING OPEN 🗳️</span>}
+                              </div>
+                              <div className="text-xs" style={{ color: "var(--muted)" }}>Deadline: {new Date(gw.deadline).toLocaleDateString()}</div>
                             </div>
-                            <div className="text-xs" style={{ color: "var(--muted)" }}>Deadline: {new Date(gw.deadline).toLocaleDateString()}</div>
-                          </div>
-                          <div className="flex gap-2">
-                            {gw.is_active && (
-                              <span className="text-xs px-2 py-0.5 rounded font-bold" style={{ background: "rgba(56,255,126,0.2)", color: "var(--primary)" }}>ACTIVE</span>
-                            )}
-                            {!gw.is_active && !gw.is_finished && (
-                              <button onClick={() => activateGW(gw.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: "#2a2a3a" }}>
-                                Activate
+                            
+                            <div className="flex gap-2">
+                              {gw.is_active && (
+                                <span className="text-xs px-2 py-0.5 rounded font-bold flex items-center" style={{ background: "rgba(56,255,126,0.2)", color: "var(--primary)" }}>ACTIVE</span>
+                              )}
+                              {!gw.is_active && !gw.is_finished && (
+                                <button onClick={() => activateGW(gw.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium" style={{ background: "#2a2a3a" }}>
+                                  Activate
+                                </button>
+                              )}
+                              <button onClick={() => calculatePoints(gw.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium text-white" style={{ background: gw.is_finished ? "#f59e0b" : "#ef4444" }}>
+                                {gw.is_finished ? "Recalculate Points" : "Calculate Points"}
                               </button>
-                            )}
-                            <button onClick={() => calculatePoints(gw.id)} className="text-xs px-3 py-1.5 rounded-lg font-medium text-white" style={{ background: gw.is_finished ? "#f59e0b" : "#ef4444" }}>
-                              {gw.is_finished ? "Recalculate Points" : "Calculate Points"}
+                            </div>
+                          </div>
+
+                          <div className="pt-2 mt-1 border-t border-white/5">
+                            <button 
+                              onClick={() => toggleVoting(gw.id)}
+                              className="text-xs px-3 py-1.5 rounded-lg font-medium w-full text-center transition-colors" 
+                              style={{ 
+                                background: gw.is_voting_open ? "rgba(239, 68, 68, 0.15)" : "rgba(59, 130, 246, 0.15)",
+                                color: gw.is_voting_open ? "#ef4444" : "#3b82f6",
+                                border: `1px solid ${gw.is_voting_open ? "rgba(239, 68, 68, 0.3)" : "rgba(59, 130, 246, 0.3)"}`
+                              }}
+                            >
+                              {gw.is_voting_open ? "🔒 Close MVP Voting" : "🔓 Open MVP Voting"}
                             </button>
                           </div>
+
                         </div>
                       ))}
                     </div>
@@ -498,7 +522,6 @@ export default function AdminPage() {
               {activeTab === "stats" && (
                 <div className="card p-4">
 
-                  {/* Header */}
                   <div className="flex items-center justify-between mb-4">
                     <h2 className="font-semibold">Enter Match Stats</h2>
                     {savedIds.size > 0 && (
@@ -508,7 +531,6 @@ export default function AdminPage() {
                     )}
                   </div>
 
-                  {/* GW + search */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div>
                       <label className="block text-xs mb-1" style={{ color: "var(--muted)" }}>Gameweek</label>
@@ -549,7 +571,7 @@ export default function AdminPage() {
                               flexShrink: 0,
                               width: 30, height: 30,
                               borderRadius: 6,
-                              display: "flex", alignItems: "center", justifyItems: "center",
+                              display: "flex", alignItems: "center", justifyContent: "center",
                               fontSize: 8, fontWeight: 700,
                               cursor: "pointer",
                               border: `1.5px solid ${isSaved ? "rgba(74,222,128,.4)" : isCurrent ? "#4a6bde" : "#2a2a3a"}`,
@@ -565,7 +587,6 @@ export default function AdminPage() {
                     </div>
                   )}
 
-                  {/* Done state */}
                   {sessionDone ? (
                     <div style={{ padding: "40px 0", textAlign: "center" }}>
                       <div style={{ fontSize: 40, marginBottom: 12 }}>🎉</div>
@@ -619,30 +640,30 @@ export default function AdminPage() {
                         ))}
                       </div>
 
-                      {/* MVP toggle */}
-                      <button
-                        onClick={toggleMvp}
-                        style={{
-                          width: "100%", display: "flex", alignItems: "center", gap: 12,
-                          padding: "10px 14px", borderRadius: 10, cursor: "pointer",
-                          background: currentData.mvp ? "rgba(250,204,21,.08)" : "#1a1a24",
-                          border: `1.5px solid ${currentData.mvp ? "rgba(250,204,21,.4)" : "#2a2a3a"}`,
-                          color: "var(--foreground)", textAlign: "left", marginBottom: 10,
-                          transition: "all .15s",
-                        }}
-                      >
-                        <span style={{ fontSize: 18 }}>🏆</span>
-                        <span style={{ flex: 1 }}>
-                          <span style={{ display: "block", fontSize: 13, fontWeight: 600 }}>MVP Award</span>
-                          <span style={{ fontSize: 11, color: "var(--muted)" }}>+3 bonus points</span>
-                        </span>
-                        <span style={{
-                          fontSize: 10, fontWeight: 700, padding: "3px 8px", borderRadius: 20,
-                          background: "rgba(250,204,21,.15)", color: "#facc15",
-                          opacity: currentData.mvp ? 1 : 0.3, transition: "opacity .15s",
-                          letterSpacing: ".06em",
-                        }}>MVP</span>
-                      </button>
+                      <div className="mb-4">
+                        <label className="block text-xs mb-2 text-center" style={{ color: "var(--muted)" }}>Assign MVP Rank (Manual Vote Result)</label>
+                        <div className="flex gap-2">
+                          {[
+                            { rank: 0, label: "None", color: "#475569" },
+                            { rank: 1, label: "🥇 1st", color: "#facc15" },
+                            { rank: 2, label: "🥈 2nd", color: "#94a3b8" },
+                            { rank: 3, label: "🥉 3rd", color: "#fb923c" }
+                          ].map((btn) => (
+                            <button
+                              key={btn.rank}
+                              onClick={() => setCurrentPlayerStats(d => ({ ...d, mvp_rank: btn.rank }))}
+                              className="flex-1 py-2 rounded-lg text-sm font-bold transition-colors"
+                              style={{
+                                background: currentData.mvp_rank === btn.rank ? `${btn.color}20` : "#1a1a24",
+                                border: `1px solid ${currentData.mvp_rank === btn.rank ? btn.color : "#2a2a3a"}`,
+                                color: currentData.mvp_rank === btn.rank ? btn.color : "var(--muted)"
+                              }}
+                            >
+                              {btn.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
 
                       {/* Save & Skip */}
                       <div style={{ display: "grid", gridTemplateColumns: "1fr 3fr", gap: 8 }}>

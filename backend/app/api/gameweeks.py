@@ -9,6 +9,7 @@ from app.core.security import get_current_user, get_current_admin
 from app.models.models import Gameweek, MatchStat, Player, User, FantasyTeam, FantasyTeamGameweek
 from app.services.points_engine import calculate_player_points, get_points_breakdown, calculate_bps
 router = APIRouter(prefix="/api/gameweeks", tags=["gameweeks"])
+from app.models.models import MVPVote
 
 
 class GameweekCreate(BaseModel):
@@ -24,6 +25,7 @@ class GameweekRead(BaseModel):
     deadline: datetime
     is_active: bool
     is_finished: bool
+    is_voting_open: bool # <-- السطر الجديد
 
     class Config:
         from_attributes = True
@@ -43,7 +45,13 @@ class MatchStatCreate(BaseModel):
     penalties_scored: int = 0
     penalties_saved: int = 0
     penalties_missed: int = 0
+    mvp_rank: int = 0
+    matches_won: int = 0
 
+class VoteSubmit(BaseModel):
+    first_place_id: int
+    second_place_id: int
+    third_place_id: int
 
 class MatchStatRead(BaseModel):
     id: int
@@ -61,6 +69,8 @@ class MatchStatRead(BaseModel):
     penalties_scored: int
     penalties_saved: int
     penalties_missed: int
+    mvp_rank: int
+    matches_won: int
 
     class Config:
         from_attributes = True
@@ -69,6 +79,47 @@ class MatchStatRead(BaseModel):
 @router.get("/", response_model=List[GameweekRead])
 def list_gameweeks(session: Session = Depends(get_session)):
     return session.exec(select(Gameweek).order_by(Gameweek.number)).all()
+
+@router.post("/{gw_id}/vote")
+def submit_mvp_vote(
+    gw_id: int,
+    vote_data: VoteSubmit,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    gw = session.get(Gameweek, gw_id)
+    if not gw or not gw.is_voting_open:
+        raise HTTPException(status_code=400, detail="Voting is closed for this gameweek")
+
+    # التأكد إن اليوزر مصوتش قبل كده
+    existing_vote = session.exec(
+        select(MVPVote).where(MVPVote.gameweek_id == gw_id, MVPVote.user_id == current_user.id)
+    ).first()
+    
+    if existing_vote:
+        raise HTTPException(status_code=400, detail="You have already voted for this gameweek!")
+
+    new_vote = MVPVote(
+        gameweek_id=gw_id,
+        user_id=current_user.id,
+        first_place_id=vote_data.first_place_id,
+        second_place_id=vote_data.second_place_id,
+        third_place_id=vote_data.third_place_id
+    )
+    session.add(new_vote)
+    session.commit()
+    return {"message": "Vote submitted successfully!"}
+
+@router.get("/{gw_id}/my-vote")
+def check_my_vote(
+    gw_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    vote = session.exec(
+        select(MVPVote).where(MVPVote.gameweek_id == gw_id, MVPVote.user_id == current_user.id)
+    ).first()
+    return {"has_voted": bool(vote)}
 
 
 @router.get("/active", response_model=Optional[GameweekRead])
@@ -303,3 +354,21 @@ def get_points_breakdown_route(
         raise HTTPException(status_code=404, detail="Stat not found")
     player = session.get(Player, player_id)
     return get_points_breakdown(stat, player.position)
+
+@router.put("/{gameweek_id}/toggle-voting")
+def toggle_voting(
+    gameweek_id: int,
+    session: Session = Depends(get_session),
+    admin: User = Depends(get_current_admin),
+):
+    gw = session.get(Gameweek, gameweek_id)
+    if not gw:
+        raise HTTPException(status_code=404, detail="Gameweek not found")
+    
+    # بيعكس الحالة (لو مفتوح يقفله، ولو مقفول يفتحه)
+    gw.is_voting_open = not gw.is_voting_open
+    session.add(gw)
+    session.commit()
+    
+    status = "OPEN" if gw.is_voting_open else "CLOSED"
+    return {"message": f"Voting is now {status} for {gw.name}"}

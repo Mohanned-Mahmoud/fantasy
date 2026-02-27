@@ -35,6 +35,7 @@ class Gameweek(SQLModel, table=True):
     deadline: datetime
     is_active: bool = Field(default=False)
     is_finished: bool = Field(default=False)
+    is_voting_open: bool = Field(default=False) # <-- السطر الجديد
 
     match_stats: List["MatchStat"] = Relationship(back_populates="gameweek")
     fantasy_team_gameweeks: List["FantasyTeamGameweek"] = Relationship(back_populates="gameweek")
@@ -119,3 +120,11 @@ class MiniLeagueMember(SQLModel, table=True):
 
     league: Optional[MiniLeague] = Relationship(back_populates="members")
     user: Optional[User] = Relationship(back_populates="mini_league_memberships")
+
+class MVPVote(SQLModel, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True)
+    gameweek_id: int = Field(foreign_key="gameweek.id")
+    user_id: int = Field(foreign_key="user.id")
+    first_place_id: int = Field(foreign_key="player.id")
+    second_place_id: int = Field(foreign_key="player.id")
+    third_place_id: int = Field(foreign_key="player.id")

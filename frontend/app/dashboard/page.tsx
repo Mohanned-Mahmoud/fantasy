@@ -24,6 +24,7 @@ export default function DashboardPage() {
   const user = typeof window !== "undefined" ? getUser() : null;
   const [team, setTeam] = useState<FantasyTeam | null>(null);
   const [activeGW, setActiveGW] = useState<Gameweek | null>(null);
+  const [votingGW, setVotingGW] = useState<Gameweek | null>(null); // State جديدة عشان نعرف لو فيه تصويت مفتوح
   const [teamGW, setTeamGW] = useState<TeamGW | null>(null);
   const [players, setPlayers] = useState<Player[]>([]);
   const [highlights, setHighlights] = useState<any>(null);
@@ -39,13 +40,14 @@ export default function DashboardPage() {
 
   async function loadData() {
     try {
-      // التعديل هنا: هنجيب الـ history بتاع تشكيلاتك ونجيب الـ highlights للداش بورد
-      const [teamRes, gwRes, playersRes, historyRes, highlightsRes] = await Promise.all([
+      // ضفنا طلب جديد يجيب كل الجولات عشان ندور فيهم على جولة التصويت بتاعها مفتوح
+      const [teamRes, gwRes, playersRes, historyRes, highlightsRes, allGwsRes] = await Promise.all([
         api.get("/teams/my"),
         api.get("/gameweeks/active"),
         api.get("/players/"),
         api.get("/teams/my/history").catch(() => ({ data: [] })),
-        api.get("/stats/dashboard-highlights").catch(() => ({ data: { show: false } }))
+        api.get("/stats/dashboard-highlights").catch(() => ({ data: { show: false } })),
+        api.get("/gameweeks/").catch(() => ({ data: [] }))
       ]);
       
       setTeam(teamRes.data);
@@ -53,21 +55,22 @@ export default function DashboardPage() {
       setPlayers(playersRes.data);
       setHighlights(highlightsRes.data);
 
+      // بندور على أي جولة الأدمن فاتح فيها التصويت
+      const openVotingGW = allGwsRes.data.find((gw: Gameweek) => gw.is_voting_open);
+      setVotingGW(openVotingGW || null);
+
       if (gwRes.data) {
-        // لو في جولة شغالة، هات نقط الجولة دي
         try {
           const tgwRes = await api.get(`/teams/my/gameweek/${gwRes.data.id}`);
           if (tgwRes.data) {
             setTeamGW(tgwRes.data);
           } else {
-            // لو الجولة لسه بادئة ومفيش فريق اتسجل فيها لسه، اعرض آخر جولة
             setLatestHistoryGW(historyRes.data);
           }
         } catch {
           setLatestHistoryGW(historyRes.data);
         }
       } else {
-        // لو مفيش جولة شغالة (بين الجولات مثلاً)، اعرض نقط آخر جولة خلصت
         setLatestHistoryGW(historyRes.data);
       }
     } catch (err) {
@@ -77,7 +80,6 @@ export default function DashboardPage() {
     }
   }
 
-  // دالة مساعدة لاستخراج آخر جولة من السجل
   function setLatestHistoryGW(historyData: TeamGW[]) {
     if (historyData && historyData.length > 0) {
       const sortedHistory = historyData.sort((a, b) => (b.gameweek_id || 0) - (a.gameweek_id || 0));
@@ -122,15 +124,31 @@ export default function DashboardPage() {
                   <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>TOTAL POINTS</div>
                   <div className="text-4xl font-black gradient-text">{team?.total_points ?? 0}</div>
                 </div>
-                <div className="card p-4">
-                  <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
-                    {activeGW ? "GAMEWEEK POINTS" : "LAST GAMEWEEK POINTS"}
+                
+                {/* ── كارت بوينتات الجولة + زرار التصويت ── */}
+                <div className="card p-4 flex flex-col justify-between">
+                  <div>
+                    <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>
+                      {activeGW ? "GAMEWEEK POINTS" : "LAST GAMEWEEK POINTS"}
+                    </div>
+                    <div className="text-4xl font-black" style={{ color: "#7c3aed" }}>{teamGW?.gameweek_points ?? 0}</div>
+                    {(teamGW?.transfer_penalty ?? 0) > 0 && (
+                      <div className="text-xs text-red-400 mt-1">-{teamGW?.transfer_penalty} transfer penalty</div>
+                    )}
                   </div>
-                  <div className="text-4xl font-black" style={{ color: "#7c3aed" }}>{teamGW?.gameweek_points ?? 0}</div>
-                  {(teamGW?.transfer_penalty ?? 0) > 0 && (
-                    <div className="text-xs text-red-400 mt-1">-{teamGW?.transfer_penalty} transfer penalty</div>
+                  
+                  {/* زرار التصويت بيظهر بس لو الأدمن فاتح التصويت */}
+                  {votingGW && (
+                    <button
+                      onClick={() => router.push("/vote")}
+                      className="mt-4 w-full py-2.5 rounded-xl font-bold text-sm transition-all animate-pulse shadow-[0_0_15px_rgba(250,204,21,0.15)] hover:scale-[1.02]"
+                      style={{ background: "rgba(250,204,21,0.15)", color: "#facc15", border: "1px solid rgba(250,204,21,0.3)" }}
+                    >
+                      🗳️ تصويت الـ MVP متاح الآن!
+                    </button>
                   )}
                 </div>
+
                 <div className="card p-4">
                   <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>BUDGET</div>
                   <div className="text-3xl font-black text-yellow-400">£{team?.budget_remaining?.toFixed(1)}M</div>

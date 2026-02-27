@@ -54,6 +54,7 @@ export interface Gameweek {
   deadline: string;
   is_active: boolean;
   is_finished: boolean;
+  is_voting_open: boolean; // 👈 السطر الجديد اللي هيحل الإيرور
 }
 
 export interface FantasyTeam {
