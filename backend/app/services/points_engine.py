@@ -7,57 +7,57 @@ from app.models.models import MatchStat, Player
 
 POINTS_CONFIG = {
     "GK": {
-        "goal": 6,            # إعجاز
+        "goal": 5,            
         "assist": 3,
-        "clean_sheet": 5,     
-        "save_per_3": 1,      
+        "clean_sheet": 3,     
+        "save_per_2": 1,      # نقطة لكل تصديين (زي الفرونت)
         "defensive_error": -1,
         "own_goal": -2,
-        "played": 1,
+        "played": 0,          # لغينا نقطة الحضور عشان تتطابق مع الفرونت
         "mvp": 3,
-        "nutmeg": 2,          
+        "nutmeg": 1,          
         "penalty_scored": 3,
         "penalty_saved": 5,
         "penalty_miss": -2,
     },
     "DEF": {
-        "goal": 5,            # الجول بـ 5 عشان نشجعه يزيد
+        "goal": 5,            
         "assist": 3,
         "clean_sheet": 3,
-        "save_per_3": 0,
+        "save_per_2": 0,
         "defensive_error": -1,
         "own_goal": -2,
-        "played": 1,
+        "played": 0,
         "mvp": 3,
-        "nutmeg": 2,          
+        "nutmeg": 1,          
         "penalty_scored": 3,
         "penalty_saved": 5,   
         "penalty_miss": -2,
     },
     "MID": {
-        "goal": 5,            # زي المدافع
+        "goal": 4,            
         "assist": 3,
-        "clean_sheet": 2,     
-        "save_per_3": 0,
+        "clean_sheet": 1,     
+        "save_per_2": 0,
         "defensive_error": -1,
         "own_goal": -2,
-        "played": 1,
+        "played": 0,
         "mvp": 3,
-        "nutmeg": 2,
+        "nutmeg": 1,
         "penalty_scored": 3,
         "penalty_saved": 5,
         "penalty_miss": -2,
     },
     "ATT": {
-        "goal": 4,            # رجعناه لـ 4 نقط عشان ياخد حقه لما يتألق ⚽
+        "goal": 3,            
         "assist": 3,
-        "clean_sheet": 1,     # ولسه بياخد نقطة لما الفرقة تقفل ورا 🛡️
-        "save_per_3": 0,
+        "clean_sheet": 0,     
+        "save_per_2": 0,
         "defensive_error": -1,
         "own_goal": -2,
-        "played": 1,
+        "played": 0,
         "mvp": 3,
-        "nutmeg": 2,
+        "nutmeg": 1,
         "penalty_scored": 3,
         "penalty_saved": 5,
         "penalty_miss": -2,
@@ -69,46 +69,36 @@ def calculate_player_points(stat: MatchStat, position: str) -> int:
     """
     Calculate fantasy points for a player based on their match stats.
     """
-    pos = position.upper()
+    pos = position.upper() if position else "ATT"
     config = POINTS_CONFIG.get(pos, POINTS_CONFIG["ATT"])
     points = 0
 
-    # ١. نقطة الحضور (مجرد ما يشم النجيله)
-    if stat.minutes_played > 0:
+    if (stat.minutes_played or 0) > 0:
         points += config["played"]
 
-    # ٢. الأجوان العادية (كل مركز بتسعيرته)
-    points += stat.goals * config["goal"]
-    
-    # ٣. أهداف ضربات الجزاء (نقاط ثابتة أقل من الجول العادي)
+    points += (stat.goals or 0) * config["goal"]
     points += getattr(stat, "penalties_scored", 0) * config["penalty_scored"]
+    points += (stat.assists or 0) * config["assist"]
 
-    # ٤. الأسيست (صنايعي الأجوان)
-    points += stat.assists * config["assist"]
-
-    # ٥. الكلين شيت (تقفيل ورا بمية ونور)
-    if stat.clean_sheet > 0:
+    if (stat.clean_sheet or 0) > 0:
         points += stat.clean_sheet * config["clean_sheet"]
 
-    # ٦. التصديات (شغل الحراس - نقطة لكل ٣)
-    save_points = (stat.saves // 3) * config["save_per_3"]
+    save_points = ((stat.saves or 0) // 2) * config["save_per_2"]
     points += save_points
     
-    # ٧. صد ضربات الجزاء (بونص عالي لو مش حارس)
     points += getattr(stat, "penalties_saved", 0) * config["penalty_saved"]
 
-    # ٨. الخصومات والسوالب (أخطاء، أجوان عكسية، ضياع جزاء)
-    points += stat.defensive_errors * config["defensive_error"]
-    points += stat.own_goals * config["own_goal"]
+    points += (stat.defensive_errors or 0) * config["defensive_error"]
+    points += (stat.own_goals or 0) * config["own_goal"]
     points += getattr(stat, "penalties_missed", 0) * config["penalty_miss"]
 
-    # ٩. روقان الخماسي (نجم الماتش والكباري)
     if stat.mvp:
         points += config["mvp"]
-    points += stat.nutmegs * config["nutmeg"]
+        
+    points += (stat.nutmegs or 0) * config["nutmeg"]
 
-    # أقل حاجة ممكن يوصلها اللعيب لو اليوم كان كارثي هي -10
-    return max(points, -10)
+    return points
+
 
 def calculate_gameweek_team_points(
     player_stats: list[dict],
@@ -130,37 +120,53 @@ def calculate_gameweek_team_points(
         total += pts
     return total - transfer_penalty
 
+
 def get_points_breakdown(stat: MatchStat, position: str) -> dict:
     """
     Returns a detailed breakdown of how points were earned.
     """
-    config = POINTS_CONFIG.get(position.upper(), POINTS_CONFIG["ATT"])
+    pos = position.upper() if position else "ATT"
+    config = POINTS_CONFIG.get(pos, POINTS_CONFIG["ATT"])
     breakdown = {}
 
-    if stat.minutes_played > 0:
+    if (stat.minutes_played or 0) > 0 and config["played"] > 0:
         breakdown["Appearance"] = config["played"]
 
-    if stat.goals > 0:
+    if (stat.goals or 0) > 0:
         breakdown[f"Goals ({stat.goals}x)"] = stat.goals * config["goal"]
-    if getattr(stat, "penalties_scored", 0) > 0:
-        breakdown[f"Penalties Scored ({stat.penalties_scored}x)"] = stat.penalties_scored * config["penalty_scored"]
-    if stat.assists > 0:
+        
+    pen_scored = getattr(stat, "penalties_scored", 0)
+    if pen_scored > 0:
+        breakdown[f"Penalties Scored ({pen_scored}x)"] = pen_scored * config["penalty_scored"]
+        
+    if (stat.assists or 0) > 0:
         breakdown[f"Assists ({stat.assists}x)"] = stat.assists * config["assist"]
-    if stat.clean_sheet > 0:
+        
+    if (stat.clean_sheet or 0) > 0 and config["clean_sheet"] > 0:
         breakdown[f"Clean Sheet ({stat.clean_sheet}x)"] = stat.clean_sheet * config["clean_sheet"]
-    if (stat.saves // 3) > 0 and config["save_per_3"] > 0:
-        breakdown[f"Saves ({stat.saves}x)"] = (stat.saves // 3) * config["save_per_3"]
-    if getattr(stat, "penalties_saved", 0) > 0:
-        breakdown[f"Penalty Saves ({stat.penalties_saved}x)"] = stat.penalties_saved * config["penalty_saved"]
-    if stat.defensive_errors > 0:
+        
+    saves = stat.saves or 0
+    if (saves // 2) > 0 and config["save_per_2"] > 0:
+        breakdown[f"Saves ({saves}x)"] = (saves // 2) * config["save_per_2"]
+        
+    pen_saved = getattr(stat, "penalties_saved", 0)
+    if pen_saved > 0:
+        breakdown[f"Penalty Saves ({pen_saved}x)"] = pen_saved * config["penalty_saved"]
+        
+    if (stat.defensive_errors or 0) > 0:
         breakdown[f"Defensive Error ({stat.defensive_errors}x)"] = stat.defensive_errors * config["defensive_error"]
-    if stat.own_goals > 0:
+        
+    if (stat.own_goals or 0) > 0:
         breakdown[f"Own Goals ({stat.own_goals}x)"] = stat.own_goals * config["own_goal"]
-    if getattr(stat, "penalties_missed", 0) > 0:
-        breakdown[f"Penalty Missed ({stat.penalties_missed}x)"] = stat.penalties_missed * config["penalty_miss"]
+        
+    pen_missed = getattr(stat, "penalties_missed", 0)
+    if pen_missed > 0:
+        breakdown[f"Penalty Missed ({pen_missed}x)"] = pen_missed * config["penalty_miss"]
+        
     if stat.mvp:
         breakdown["MVP Award"] = config["mvp"]
-    if stat.nutmegs > 0:
+        
+    if (stat.nutmegs or 0) > 0 and config["nutmeg"] > 0:
         breakdown[f"Nutmegs/Skills ({stat.nutmegs}x)"] = stat.nutmegs * config["nutmeg"]
 
     breakdown["Total"] = sum(breakdown.values())
