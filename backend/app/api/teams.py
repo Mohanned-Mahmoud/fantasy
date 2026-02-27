@@ -7,7 +7,7 @@ from datetime import datetime # التعديل: استيراد مكتبة الو
 from app.core.database import get_session
 from app.core.security import get_current_user
 from app.models.models import (
-    User, FantasyTeam, FantasyTeamGameweek, Gameweek, Player, MatchStat,SystemSettings
+    User, FantasyTeam, FantasyTeamGameweek, Gameweek, Player, MatchStat, SystemSettings
 )
 from app.services.points_engine import calculate_gameweek_team_points
 
@@ -219,3 +219,37 @@ def team_history(
     return session.exec(
         select(FantasyTeamGameweek).where(FantasyTeamGameweek.fantasy_team_id == team.id)
     ).all()
+
+
+# ========== الإضافة الجديدة: مسار جلب تشكيلة أي مدرب ==========
+@router.get("/user/{username}/gameweek/{gw_id}", response_model=Optional[TeamGameweekRead])
+def get_user_team_gameweek(
+    username: str,
+    gw_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user),
+):
+    target_user = session.exec(select(User).where(User.username == username)).first()
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    team = session.exec(select(FantasyTeam).where(FantasyTeam.manager_id == target_user.id)).first()
+    if not team:
+        raise HTTPException(status_code=404, detail="Team not found")
+
+    gw = session.get(Gameweek, gw_id)
+    if not gw:
+        raise HTTPException(status_code=404, detail="Gameweek not found")
+
+    # حماية التشكيلة: منع رؤية تشكيلات الآخرين في الجولة الحالية قبل الديدلاين
+    if gw.is_active and current_user.username != username:
+        raise HTTPException(status_code=403, detail="لا يمكنك رؤية تشكيلة هذا المدرب للجولة الحالية قبل انتهاء الديدلاين 🔒")
+
+    tgw = session.exec(
+        select(FantasyTeamGameweek).where(
+            (FantasyTeamGameweek.fantasy_team_id == team.id)
+            & (FantasyTeamGameweek.gameweek_id == gw_id)
+        )
+    ).first()
+    
+    return tgw
