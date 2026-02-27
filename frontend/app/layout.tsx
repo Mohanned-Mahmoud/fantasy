@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import "./globals.css";
+import MaintenanceGuard from "@/components/MaintenanceGuard"; // 👈 هنا عملنا الإمبورت
 
 export const metadata: Metadata = {
   title: "Fantasy 5-a-side Football",
@@ -14,7 +15,10 @@ export default function RootLayout({
   return (
     <html lang="en" className="dark">
       <body className="antialiased min-h-screen" style={{ background: "var(--background)", color: "var(--foreground)" }}>
-        {children}
+        {/* 👈 هنا غلفنا الموقع كله بالـ Guard */}
+        <MaintenanceGuard>
+          {children}
+        </MaintenanceGuard>
       </body>
     </html>
   );
