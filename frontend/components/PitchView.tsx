@@ -22,16 +22,16 @@ const posColors: Record<string, string> = {
   ATT: "#ef4444",
 };
 
+// 🌟 وسعنا المسافات بين الخطوط عشان نمنع التداخل (Overlap)
 const rowVerticalPosition: Record<string, string> = {
-  GK: "85%",
-  DEF: "65%",
-  MID: "40%",
-  ATT: "18%",
+  GK: "88%",
+  DEF: "66%",
+  MID: "41%",
+  ATT: "16%",
 };
 
 const PENTAGON_CLIP = "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)";
 
-// 🌟 حساب الباجات في الفران إند
 function getBadges(stat: any) {
   if (!stat) return [];
   const badges = [];
@@ -68,11 +68,9 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
   const lastTapTimeRef = useRef(0);
   const lastTapPlayerIdRef = useRef<number | null>(null);
 
-  // 🌟 نظام الإشعارات (Toast) لباجات الموبايل
   const [toastBadge, setToastBadge] = useState<{ emoji: string, title: string, bg: string } | null>(null);
   const toastTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // تنظيف التايمر لو اليوزر قفل الصفحة
   useEffect(() => {
     return () => {
       if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
@@ -80,13 +78,10 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
   }, []);
 
   function handleBadgeClick(e: React.MouseEvent | React.TouchEvent, badge: any) {
-    e.stopPropagation(); // عشان اليوزر لما يدوس عالباج ميفتحش إحصائيات اللاعب نفسه بالغلط
+    e.stopPropagation();
     setToastBadge(badge);
-    
     if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
-    toastTimerRef.current = setTimeout(() => {
-      setToastBadge(null);
-    }, 3000); // الإشعار بيختفي لوحده بعد 3 ثواني
+    toastTimerRef.current = setTimeout(() => { setToastBadge(null); }, 3000);
   }
 
   function handlePlayerTouchEnd(playerId: number) {
@@ -117,16 +112,12 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
     Object.entries(groups).forEach(([pos, pps]) => {
       const count = pps.length;
       const top = rowVerticalPosition[pos];
-
       pps.forEach((pp, index) => {
         let left = "50%"; 
-        if (count > 1) {
-          left = `${(index + 1) * (100 / (count + 1))}%`;
-        }
+        if (count > 1) left = `${(index + 1) * (100 / (count + 1))}%`;
         result.push({ ...pp, top, left, label: pos });
       });
     });
-
     return result;
   };
 
@@ -152,35 +143,36 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
             key={`${pp.player.id}-${idx}`}
             onClick={() => onPlayerClick?.(pp.player)}
             onTouchEnd={() => handlePlayerTouchEnd(pp.player.id)}
-            className="absolute flex flex-col items-center gap-1.5 transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer transition-all duration-500 ease-in-out z-20 hover:z-50"
+            className="absolute flex flex-col items-center transform -translate-x-1/2 -translate-y-1/2 group cursor-pointer transition-all duration-500 ease-in-out z-20 hover:z-50"
             style={{ top: pp.top, left: pp.left }}
           >
             <div className="relative">
               
               {/* ── حاوية الباجات ── */}
               {badges.length > 0 && (
-                <div className="absolute -top-2 -right-2 flex -space-x-1.5 z-50">
+                <div className="absolute -top-1 -right-2 flex -space-x-1.5 z-50">
                   {badges.map((badge) => (
                     <div 
                       key={badge.id} 
-                      onClick={(e) => handleBadgeClick(e, badge)} // 👈 تفعيل الضغط على الموبايل
-                      className="w-6 h-6 flex items-center justify-center bg-gradient-to-br from-yellow-200 to-yellow-600 shadow-[0_0_10px_rgba(0,0,0,0.8)] transform hover:scale-125 transition-transform cursor-pointer"
+                      onClick={(e) => handleBadgeClick(e, badge)}
+                      className="w-5 h-5 sm:w-6 sm:h-6 flex items-center justify-center bg-gradient-to-br from-yellow-200 to-yellow-600 shadow-[0_0_8px_rgba(0,0,0,0.8)] transform hover:scale-125 transition-transform cursor-pointer"
                       style={{ clipPath: PENTAGON_CLIP }}
-                      title={badge.title} // الهوفر للديسكتوب لسه شغال
+                      title={badge.title}
                     >
                       <div 
-                        className="w-[19px] h-[19px] flex items-center justify-center"
+                        className="w-[16px] h-[16px] sm:w-[19px] sm:h-[19px] flex items-center justify-center"
                         style={{ background: badge.bg, clipPath: PENTAGON_CLIP }}
                       >
-                        <span className="text-[14px] filter drop-shadow-md leading-none flex items-center justify-center pointer-events-none">{badge.emoji}</span>
+                        <span className="text-[11px] sm:text-[14px] filter drop-shadow-md leading-none flex items-center justify-center pointer-events-none">{badge.emoji}</span>
                       </div>
                     </div>
                   ))}
                 </div>
               )}
 
+              {/* 🌟 الصورة بتصغر سنة على الموبايل وبتكبر في الشاشات العادية */}
               <div
-                className="w-14 h-14 rounded-full overflow-hidden shadow-xl border-2 transition-transform group-hover:scale-110 flex items-center justify-center bg-[#1a1a24] relative z-30"
+                className="w-12 h-12 sm:w-14 sm:h-14 rounded-full overflow-hidden shadow-xl border-2 transition-transform group-hover:scale-110 flex items-center justify-center bg-[#1a1a24] relative z-30"
                 style={{
                   borderColor: pp.isCaptain ? "#38ff7e" : "rgba(255,255,255,0.3)",
                   boxShadow: pp.isCaptain ? "0 0 15px rgba(56,255,126,0.5)" : undefined,
@@ -194,21 +186,23 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
               </div>
               
               {pp.isCaptain && (
-                <div className="absolute -bottom-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black z-40 shadow-md" style={{ background: "#38ff7e", color: "#0f0f13" }}>
+                <div className="absolute -bottom-1 -right-1 w-4 h-4 sm:w-5 sm:h-5 rounded-full flex items-center justify-center text-[9px] sm:text-[10px] font-black z-40 shadow-md" style={{ background: "#38ff7e", color: "#0f0f13" }}>
                   C
                 </div>
               )}
             </div>
 
-            <div className="px-2 py-0.5 rounded text-[10px] font-semibold text-white max-w-[80px] truncate text-center shadow-sm relative z-30" style={{ background: "rgba(0,0,0,0.8)", backdropFilter: "blur(4px)" }}>
-              {pp.player.name.split(" ").pop()}
-            </div>
-
-            {pp.stat && (
-              <div className="text-[9px] font-black text-yellow-400 bg-black/80 px-1.5 py-0.5 rounded shadow-lg border border-yellow-400/20 relative z-30">
-                {pp.stat.points ?? 0} pts
+            {/* 🌟 كبسولة الاسم والنقط المدمجة (وفرت مساحة كبيرة جداً) */}
+            <div className="mt-1 flex flex-col items-center rounded overflow-hidden shadow-sm border border-white/10 relative z-30" style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(4px)" }}>
+              <div className="px-2 py-[2px] text-[9px] sm:text-[10px] font-bold text-white max-w-[80px] truncate text-center w-full">
+                {pp.player.name.split(" ").pop()}
               </div>
-            )}
+              {pp.stat && (
+                <div className="px-2 py-[1px] text-[8px] sm:text-[9px] font-black text-yellow-400 bg-white/10 border-t border-white/10 w-full text-center">
+                  {pp.stat.points ?? 0} pts
+                </div>
+              )}
+            </div>
 
             {onCaptainToggle && (
               <button
@@ -223,21 +217,19 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
         );
       })}
 
-      {/* ── 🌟 رسالة الموبايل العائمة (Toast) ── */}
+      {/* رسالة الموبايل العائمة (Toast) */}
       {toastBadge && (
         <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 z-[100] w-[90%] max-w-[280px] transition-all duration-300 pointer-events-none">
           <div 
             className="flex items-center gap-3 px-4 py-3 rounded-2xl shadow-[0_10px_30px_rgba(0,0,0,0.9)] border border-white/10"
             style={{ background: "rgba(20, 20, 25, 0.95)", backdropFilter: "blur(8px)" }}
           >
-            {/* الباج نفسه كأيقونة */}
             <div 
               className="w-9 h-9 flex-shrink-0 flex items-center justify-center shadow-inner"
               style={{ background: toastBadge.bg, clipPath: PENTAGON_CLIP }}
             >
               <span className="text-[18px] filter drop-shadow-md">{toastBadge.emoji}</span>
             </div>
-            {/* اسم ومعنى الباج */}
             <div className="flex-1 font-black text-[13px] text-white leading-tight">
               {toastBadge.title}
             </div>
