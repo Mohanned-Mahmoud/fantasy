@@ -23,13 +23,13 @@ POINTS_CONFIG = {
         "goal": 5,            # الجول بـ 5 عشان نشجعه يزيد
         "assist": 3,
         "clean_sheet": 3,
-        "save_per_3": 0,
+        "save_per_3": 2,
         "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
         "nutmeg": 2,          
-        "penalty_scored": 3,
+        "penalty_scored": 7,
         "penalty_saved": 5,   
         "penalty_miss": -2,
     },
@@ -37,13 +37,13 @@ POINTS_CONFIG = {
         "goal": 5,            # زي المدافع
         "assist": 3,
         "clean_sheet": 2,     
-        "save_per_3": 0,
+        "save_per_3": 2,
         "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
         "nutmeg": 2,
-        "penalty_scored": 3,
+        "penalty_scored": 6,
         "penalty_saved": 5,
         "penalty_miss": -2,
     },
@@ -51,23 +51,41 @@ POINTS_CONFIG = {
         "goal": 4,            # رجعناه لـ 4 نقط عشان ياخد حقه لما يتألق ⚽
         "assist": 3,
         "clean_sheet": 1,     # ولسه بياخد نقطة لما الفرقة تقفل ورا 🛡️
-        "save_per_3": 0,
+        "save_per_3": 2,
         "defensive_error": -1,
         "own_goal": -2,
         "played": 1,
         "mvp": 3,
         "nutmeg": 2,
-        "penalty_scored": 3,
+        "penalty_scored": 4,
         "penalty_saved": 5,
         "penalty_miss": -2,
     },
 }
 
+def normalize_position(position: str) -> str:
+    """
+    بيحول أي اسم مركز للاختصار المعتمد في POINTS_CONFIG
+    """
+    if not position:
+        return "ATT"
+    
+    pos = position.upper().strip()
+    
+    if pos.startswith("G"):  # Goalkeeper, GK, G
+        return "GK"
+    elif pos.startswith("D"):  # Defender, DEF, D
+        return "DEF"
+    elif pos.startswith("M"):  # Midfielder, MID, M
+        return "MID"
+    else:                    # Attacker, Forward, ATT, F, A
+        return "ATT"
+
 def calculate_player_points(stat: MatchStat, position: str) -> int:
     """
     Calculate fantasy points for a player based on their match stats.
     """
-    pos = position.upper() if position else "ATT"
+    pos = normalize_position(position)
     config = POINTS_CONFIG.get(pos, POINTS_CONFIG["ATT"])
     points = 0
 
@@ -125,7 +143,7 @@ def calculate_gameweek_team_points(
 
 
 def get_points_breakdown(stat: MatchStat, position: str) -> dict:
-    pos = position.upper() if position else "ATT"
+    pos = normalize_position(position)
     config = POINTS_CONFIG.get(pos, POINTS_CONFIG["ATT"])
     breakdown = {}
 
