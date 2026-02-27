@@ -25,6 +25,11 @@ export default function SquadPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  // States للـ Popup بتاع تفاصيل اللاعب
+  const [infoPlayer, setInfoPlayer] = useState<Player | null>(null);
+  const [playerBreakdown, setPlayerBreakdown] = useState<Record<string, number> | null>(null);
+  const [loadingBreakdown, setLoadingBreakdown] = useState(false);
+
   useEffect(() => {
     if (!isLoggedIn()) { router.push("/login"); return; }
     loadData();
@@ -44,19 +49,16 @@ export default function SquadPage() {
       if (gwRes.data) {
         try {
           const tgwRes = await api.get(`/teams/my/gameweek/${gwRes.data.id}`);
-          // التعديل هنا: محاولة تحميل التشكيلة للجولة الحالية
           if (tgwRes.data && tgwRes.data.player1_id) {
             const ids = [tgwRes.data.player1_id, tgwRes.data.player2_id, tgwRes.data.player3_id, tgwRes.data.player4_id, tgwRes.data.player5_id].filter(Boolean);
             setSelectedIds(ids);
             if (tgwRes.data.captain_id) setCaptainId(tgwRes.data.captain_id);
           } else if (teamRes.data) {
-             // Fallback: لو مفيش تشكيلة لسه (أو الباك إند تأخر في النسخ)، هات آخر تشكيلة محفوظة في الفريق الأساسي
             const ids = [teamRes.data.player1_id, teamRes.data.player2_id, teamRes.data.player3_id, teamRes.data.player4_id, teamRes.data.player5_id].filter(Boolean);
             setSelectedIds(ids);
             if (teamRes.data.captain_id) setCaptainId(teamRes.data.captain_id);
           }
         } catch {
-          // Fallback في حالة حدوث إيرور 404 (لم يتم العثور على تشكيلة)
           if (teamRes.data) {
             const ids = [teamRes.data.player1_id, teamRes.data.player2_id, teamRes.data.player3_id, teamRes.data.player4_id, teamRes.data.player5_id].filter(Boolean);
             setSelectedIds(ids);
@@ -114,12 +116,30 @@ export default function SquadPage() {
     }
   }
 
-  const filteredPlayers = filterPos === "ALL" ? players : players.filter((p) => p.position === filterPos);
+  // دالة فتح البوب-أب وجلب تفاصيل النقط
+  async function handlePlayerClick(player: Player) {
+    setInfoPlayer(player);
+    setPlayerBreakdown(null); // تفريغ الداتا القديمة
+    
+    if (activeGW) {
+      setLoadingBreakdown(true);
+      try {
+        const res = await api.get(`/gameweeks/${activeGW.id}/stats/${player.id}/breakdown`);
+        setPlayerBreakdown(res.data);
+      } catch (err) {
+        // لو مفيش إحصائيات لسه للاعب ده هيرجع 404
+        setPlayerBreakdown({}); 
+      } finally {
+        setLoadingBreakdown(false);
+      }
+    }
+  }
 
+  const filteredPlayers = filterPos === "ALL" ? players : players.filter((p) => p.position === filterPos);
   const pitchPlayers = selectedPlayers.map((p) => ({ player: p, isCaptain: p.id === captainId }));
 
   return (
-    <div className="min-h-screen" style={{ background: "var(--background)" }}>
+    <div className="min-h-screen relative" style={{ background: "var(--background)" }}>
       <Navbar />
       <main className="md:ml-60 pb-20 md:pb-0 px-4 md:px-8 py-6">
         <div className="max-w-5xl mx-auto">
@@ -151,7 +171,13 @@ export default function SquadPage() {
                       {selectedIds.length}/5 players
                     </span>
                   </div>
-                  <PitchView players={pitchPlayers} onCaptainToggle={toggleCaptain} />
+                  
+                  {/* ربطنا الضغطة على اللاعب في الملعب بالبوب-أب */}
+                  <PitchView 
+                    players={pitchPlayers} 
+                    onCaptainToggle={toggleCaptain} 
+                    onPlayerClick={handlePlayerClick} 
+                  />
 
                   <div className="mt-4 space-y-2">
                     <div className="flex justify-between text-sm">
@@ -203,7 +229,7 @@ export default function SquadPage() {
 
                   <div className="space-y-2 max-h-[600px] overflow-y-auto pr-1">
                     {filteredPlayers.length === 0 ? (
-                      <div className="text-center py-8" style={{ color: "var(--muted)" }}>No players available. Ask your admin to add players.</div>
+                      <div className="text-center py-8" style={{ color: "var(--muted)" }}>No players available.</div>
                     ) : filteredPlayers.map((player) => {
                       const isSelected = selectedIds.includes(player.id);
                       const isCap = captainId === player.id;
@@ -235,30 +261,38 @@ export default function SquadPage() {
                               {player.name}
                               <span 
                                 className="text-[9px] px-1.5 py-0.5 rounded font-bold text-white uppercase tracking-wider"
-                                style={{ 
-                                  background: posColors[player.position] || "#6b7280",
-                                  border: "1px solid rgba(255,255,255,0.1)"
-                                }}
+                                style={{ background: posColors[player.position] || "#6b7280", border: "1px solid rgba(255,255,255,0.1)" }}
                               >
                                 {player.position}
                               </span>
                               {isCap && (
-                                <span className="text-xs px-1 rounded font-bold" style={{ background: "var(--primary)", color: "#0f0f13" }}>
-                                  C
-                                </span>
+                                <span className="text-xs px-1 rounded font-bold" style={{ background: "var(--primary)", color: "#0f0f13" }}>C</span>
                               )}
                             </div>
                             <div className="text-xs" style={{ color: "var(--muted)" }}>{player.team_name}</div>
                           </div>
-                          <div className="text-right flex-shrink-0">
-                            <div className="text-sm font-bold text-yellow-400">£{player.price.toFixed(1)}M</div>
-                            <div className="text-xs" style={{ color: "var(--muted)" }}>{player.total_points} pts</div>
-                          </div>
-                          {isSelected && (
-                            <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "var(--primary)" }}>
-                              <span className="text-xs text-black font-bold">✓</span>
+                          
+                          <div className="text-right flex-shrink-0 flex items-center gap-3">
+                            <div>
+                              <div className="text-sm font-bold text-yellow-400">£{player.price.toFixed(1)}M</div>
+                              <div className="text-xs" style={{ color: "var(--muted)" }}>{player.total_points} pts</div>
                             </div>
-                          )}
+                            
+                            {/* زرار الـ Info الجديد عشان لو عايز يشوف إحصائياته من القائمة */}
+                            <button
+                              onClick={(e) => { e.stopPropagation(); handlePlayerClick(player); }}
+                              className="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-colors text-sm"
+                              title="Player Stats"
+                            >
+                              ℹ️
+                            </button>
+
+                            {isSelected && (
+                              <div className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 ml-1" style={{ background: "var(--primary)" }}>
+                                <span className="text-xs text-black font-bold">✓</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       );
                     })}
@@ -269,6 +303,82 @@ export default function SquadPage() {
           )}
         </div>
       </main>
+
+      {/* الـ Modal (البوب-أب) بتاع تفاصيل اللاعب */}
+      {infoPlayer && (
+        <div 
+          className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4" 
+          onClick={() => setInfoPlayer(null)}
+        >
+          <div 
+            className="bg-[#1a1a24] border border-white/10 rounded-2xl p-6 w-full max-w-sm shadow-2xl relative transform transition-all" 
+            onClick={e => e.stopPropagation()}
+          >
+            <button 
+              onClick={() => setInfoPlayer(null)} 
+              className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-white/5 hover:bg-white/10 text-white/50 hover:text-white transition-colors"
+            >
+              ✕
+            </button>
+
+            <div className="flex items-center gap-4 mb-6">
+              <div 
+                className="w-16 h-16 rounded-full border-2 overflow-hidden flex-shrink-0 bg-[#2a2a3a]"
+                style={{ borderColor: posColors[infoPlayer.position] || "#6b7280" }}
+              >
+                {infoPlayer.image_url ? (
+                  <img src={infoPlayer.image_url} alt={infoPlayer.name} className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-xl font-bold">{infoPlayer.position}</div>
+                )}
+              </div>
+              <div>
+                <h3 className="text-xl font-bold text-white">{infoPlayer.name}</h3>
+                <div className="text-sm text-gray-400 flex items-center gap-2 mt-1">
+                  <span>{infoPlayer.team_name}</span>
+                  <span>•</span>
+                  <span style={{ color: posColors[infoPlayer.position] || "#fff" }}>{infoPlayer.position}</span>
+                  <span>•</span>
+                  <span className="text-yellow-400">£{infoPlayer.price}M</span>
+                </div>
+              </div>
+            </div>
+
+            <h4 className="font-semibold text-[var(--primary)] mb-3 border-b border-white/10 pb-2">
+              Gameweek {activeGW?.number || "?"} Breakdown
+            </h4>
+
+            {loadingBreakdown ? (
+              <div className="text-center py-6 text-gray-400 animate-pulse">
+               loading... ⏳
+              </div>
+            ) : playerBreakdown && Object.keys(playerBreakdown).length > 0 ? (
+              <div className="space-y-2 mt-4">
+                {Object.entries(playerBreakdown)
+                  .filter(([k]) => k !== "Total")
+                  .map(([key, value]) => (
+                  <div key={key} className="flex justify-between items-center text-sm bg-white/5 p-2 rounded">
+                    <span className="text-gray-300">{key}</span>
+                    <span className={`font-bold ${value > 0 ? 'text-green-400' : value < 0 ? 'text-red-400' : 'text-gray-400'}`}>
+                      {value > 0 ? `+${value}` : value}
+                    </span>
+                  </div>
+                ))}
+                
+                <div className="flex justify-between items-center text-lg font-black text-white pt-4 border-t border-white/10 mt-4">
+                  <span>Total GW Points</span>
+                  <span className="text-[var(--primary)]">{playerBreakdown["Total"] || 0} pts</span>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500 bg-white/5 rounded-xl mt-4 border border-white/5">
+                <div className="text-3xl mb-2">🤷‍♂️</div>
+                <div>There are no breakdown points for this player in the current gameweek.</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
