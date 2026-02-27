@@ -35,7 +35,7 @@ class Gameweek(SQLModel, table=True):
     deadline: datetime
     is_active: bool = Field(default=False)
     is_finished: bool = Field(default=False)
-    is_voting_open: bool = Field(default=False) # <-- السطر الجديد
+    is_voting_open: bool = Field(default=False) 
 
     match_stats: List["MatchStat"] = Relationship(back_populates="gameweek")
     fantasy_team_gameweeks: List["FantasyTeamGameweek"] = Relationship(back_populates="gameweek")
@@ -48,27 +48,32 @@ class MatchStat(SQLModel, table=True):
 
     goals: int = Field(default=0)
     assists: int = Field(default=0)
-    clean_sheet: int = Field(default=0) # اتغيرت لرقم بدل bool
+    clean_sheet: int = Field(default=0) 
     saves: int = Field(default=0)
     defensive_errors: int = Field(default=0)
     mvp: bool = Field(default=False)
-    mvp_rank: int = Field(default=0) # <-- السطر الجديد (1 أو 2 أو 3)
+    mvp_rank: int = Field(default=0) 
     nutmegs: int = Field(default=0)
     own_goals: int = Field(default=0)
     minutes_played: int = Field(default=0)
     points: int = Field(default=0)
-    penalties_scored: int = Field(default=0)  # أهداف من ضربات جزاء
-    penalties_saved: int = Field(default=0)   # ضربات جزاء تم التصدي لها
-    penalties_missed: int = Field(default=0)  # ضربات جزاء ضائعة (خارج المرمى أو القائم)
+    penalties_scored: int = Field(default=0)  
+    penalties_saved: int = Field(default=0)   
+    penalties_missed: int = Field(default=0)  
+    
+    # 🌟 المتغيرات الجديدة للباجات وعدد الماتشات
+    matches_won: int = Field(default=0)
+    badges: str = Field(default="")
 
     player: Optional[Player] = Relationship(back_populates="match_stats")
     gameweek: Optional[Gameweek] = Relationship(back_populates="match_stats")
 
+
 class SystemSettings(SQLModel, table=True):
     id: Optional[int] = Field(default=1, primary_key=True)
     show_dashboard_stats: bool = Field(default=False)
-    allow_transfers: bool = Field(default=True)  # <-- السطر الجديد
-    maintenance_mode: bool = Field(default=False)  # <-- السطر الجديد ده
+    allow_transfers: bool = Field(default=True)  
+    maintenance_mode: bool = Field(default=False)  
 
 
 class FantasyTeam(SQLModel, table=True):
@@ -120,6 +125,7 @@ class MiniLeagueMember(SQLModel, table=True):
 
     league: Optional[MiniLeague] = Relationship(back_populates="members")
     user: Optional[User] = Relationship(back_populates="mini_league_memberships")
+
 
 class MVPVote(SQLModel, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

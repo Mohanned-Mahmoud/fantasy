@@ -243,3 +243,24 @@ def calculate_bps(stat, position: str) -> int:
     bps += (stat.own_goals or 0) * -15
 
     return bps
+
+
+def calculate_earned_badges(stat) -> str:
+    b = []
+    
+    # باجات الأساطير
+    if getattr(stat, "goals", 0) >= 5: b.append("sniper")
+    if getattr(stat, "assists", 0) >= 4: b.append("maestro")
+    if getattr(stat, "saves", 0) >= 10: b.append("wall")
+    if getattr(stat, "penalties_saved", 0) >= 1: b.append("octopus")
+    if getattr(stat, "clean_sheet", 0) >= 2: b.append("minister")
+    if getattr(stat, "mvp_rank", 0) == 1: b.append("goat")
+    if getattr(stat, "nutmegs", 0) >= 2: b.append("ankle")
+    if getattr(stat, "matches_won", 0) >= 4: b.append("lucky")
+    
+    # باجات التحفيل
+    if getattr(stat, "own_goals", 0) > 0: b.append("agent")
+    if getattr(stat, "penalties_missed", 0) > 0: b.append("freeze")
+    if getattr(stat, "defensive_errors", 0) >= 2: b.append("disaster")
+    
+    return ",".join(b)

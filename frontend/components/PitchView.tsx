@@ -31,7 +31,7 @@ const rowVerticalPosition: Record<string, string> = {
 
 const PENTAGON_CLIP = "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)";
 
-// 🌟 قللنا شروط الباجات هنا عشان تظهر على الأرقام الطبيعية للخماسي
+// 🌟 حساب الباجات في الفران إند بالشروط الصعبة اللي إنت حددتها
 function getBadges(stat: any) {
   if (!stat) return [];
   const badges = [];
@@ -48,18 +48,18 @@ function getBadges(stat: any) {
   const pm = Number(stat.penalties_missed) || 0;
   const errors = Number(stat.defensive_errors) || 0;
 
-  if (goals >= 3) badges.push({ id: 'sniper', emoji: '🎯', title: 'Hat-trick (3+ Goals)', bg: '#ef4444' });
-  if (assists >= 3) badges.push({ id: 'maestro', emoji: '🎩', title: 'Maestro (3+ Assists)', bg: '#3b82f6' });
-  if (saves >= 5) badges.push({ id: 'wall', emoji: '🧱', title: 'The Wall (5+ Saves)', bg: '#ea580c' });
+  if (goals >= 5) badges.push({ id: 'sniper', emoji: '🎯', title: 'Sniper (5+ Goals)', bg: '#ef4444' });
+  if (assists >= 4) badges.push({ id: 'maestro', emoji: '🎩', title: 'The Maestro (4+ Assists)', bg: '#3b82f6' });
+  if (saves >= 10) badges.push({ id: 'wall', emoji: '🧱', title: 'The Wall (10+ Saves)', bg: '#ea580c' });
   if (ps >= 1) badges.push({ id: 'octopus', emoji: '🐙', title: 'Penalty Killer', bg: '#9333ea' });
-  if (cs >= 1) badges.push({ id: 'minister', emoji: '🛑', title: 'Clean Sheet', bg: '#475569' });
+  if (cs >= 2) badges.push({ id: 'minister', emoji: '🛑', title: 'Minister of Defense', bg: '#475569' });
   if (mvp === 1) badges.push({ id: 'goat', emoji: '👑', title: 'The GOAT (MVP 1st)', bg: '#eab308' });
-  if (nutmegs >= 1) badges.push({ id: 'ankle', emoji: '🌀', title: 'Nutmeg!', bg: '#06b6d4' });
-  if (won >= 2) badges.push({ id: 'lucky', emoji: '🍀', title: 'Winner (2+ Wins)', bg: '#10b981' });
+  if (nutmegs >= 2) badges.push({ id: 'ankle', emoji: '🌀', title: 'Ankle Breaker (2+ Nutmegs)', bg: '#06b6d4' });
+  if (won >= 4) badges.push({ id: 'lucky', emoji: '🍀', title: 'Lucky Charm (4+ Wins)', bg: '#10b981' });
   
-  if (og > 0) badges.push({ id: 'agent', emoji: '🕵️', title: 'Own Goal', bg: '#1f2937' });
-  if (pm > 0) badges.push({ id: 'freeze', emoji: '📉', title: 'Missed Penalty', bg: '#4f46e5' });
-  if (errors >= 1) badges.push({ id: 'disaster', emoji: '⚠️', title: 'Defensive Error', bg: '#b91c1c' });
+  if (og > 0) badges.push({ id: 'agent', emoji: '🕵️', title: 'Double Agent (Own Goal)', bg: '#1f2937' });
+  if (pm > 0) badges.push({ id: 'freeze', emoji: '📉', title: 'Brain Freeze (Missed Penalty)', bg: '#4f46e5' });
+  if (errors >= 2) badges.push({ id: 'disaster', emoji: '⚠️', title: 'Walking Disaster (2+ Errors)', bg: '#b91c1c' });
   
   return badges;
 }

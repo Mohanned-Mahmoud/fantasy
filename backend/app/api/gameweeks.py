@@ -7,7 +7,7 @@ from datetime import datetime
 from app.core.database import get_session
 from app.core.security import get_current_user, get_current_admin
 from app.models.models import Gameweek, MatchStat, Player, User, FantasyTeam, FantasyTeamGameweek
-from app.services.points_engine import calculate_player_points, get_points_breakdown, calculate_bps
+from app.services.points_engine import calculate_player_points, get_points_breakdown, calculate_earned_badges
 router = APIRouter(prefix="/api/gameweeks", tags=["gameweeks"])
 from app.models.models import MVPVote
 
@@ -47,6 +47,7 @@ class MatchStatCreate(BaseModel):
     penalties_missed: int = 0
     mvp_rank: int = 0
     matches_won: int = 0
+    badges: str = "" # 👈 جديد
 
 class VoteSubmit(BaseModel):
     first_place_id: int
@@ -71,7 +72,7 @@ class MatchStatRead(BaseModel):
     penalties_missed: int
     mvp_rank: int
     matches_won: int
-
+    badges: str
     class Config:
         from_attributes = True
 
@@ -325,6 +326,7 @@ def add_match_stat(
 
     pts = calculate_player_points(stat, player.position)
     stat.points = pts
+    stat.badges = calculate_earned_badges(stat)
 
     session.add(stat)
     
