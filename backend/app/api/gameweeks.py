@@ -7,8 +7,7 @@ from datetime import datetime
 from app.core.database import get_session
 from app.core.security import get_current_user, get_current_admin
 from app.models.models import Gameweek, MatchStat, Player, User, FantasyTeam, FantasyTeamGameweek
-from app.services.points_engine import calculate_player_points, get_points_breakdown
-
+from app.services.points_engine import calculate_player_points, get_points_breakdown, calculate_bps
 router = APIRouter(prefix="/api/gameweeks", tags=["gameweeks"])
 
 
@@ -157,27 +156,47 @@ def calculate_gw_points(
 ):
     # 1. إحضار كل الإحصائيات وإعادة حسابها بالنظام الجديد أولاً
     stats = session.exec(select(MatchStat).where(MatchStat.gameweek_id == gameweek_id)).all()
-    player_pts = {}
     
+    # 1. تصفير الـ MVP وحساب (تقييم الأداء BPS) لكل لاعب
+    player_bps_scores = []
     for stat in stats:
         player = session.get(Player, stat.player_id)
         if player:
-            old_pts = stat.points or 0
-            # إرسال الإحصائيات لـ points_engine الجديد للحصول على الحسبة الصحيحة
-            new_pts = calculate_player_points(stat, player.position)
+            stat.mvp_rank = 0 
+            # بنحسب الأداء العام مش نقط الفانتسي
+            bps_score = calculate_bps(stat, player.position)
+            player_bps_scores.append((stat, player, bps_score))
             
-            # تحديث النقط في جدول الإحصائيات
-            stat.points = new_pts
-            session.add(stat)
-            
-            # تظبيط الإجمالي بتاع اللاعب في بروفايله
-            player.total_points = (player.total_points or 0) - old_pts + new_pts
-            session.add(player)
-            
-            # حفظ النقطة الجديدة عشان نجمعها للفرق
-            player_pts[stat.player_id] = new_pts
+    # 2. ترتيب اللعيبة بناءً على الأداء (BPS) وتوزيع الـ MVP
+    if player_bps_scores:
+        # بنجيب أعلى 3 تقييمات أداء في الحجز
+        unique_bps = sorted(list(set(score for _, _, score in player_bps_scores)), reverse=True)
+        
+        for stat, player, score in player_bps_scores:
+            if len(unique_bps) > 0 and score == unique_bps[0]:
+                stat.mvp_rank = 1  # المركز الأول في الأداء
+            elif len(unique_bps) > 1 and score == unique_bps[1]:
+                stat.mvp_rank = 2  # المركز الثاني في الأداء
+            elif len(unique_bps) > 2 and score == unique_bps[2]:
+                stat.mvp_rank = 3  # المركز الثالث في الأداء
 
-    # 2. إحضار كل التشكيلات وإعادة حساب نقط اليوزرز
+    # 3. حساب نقاط الفانتسي الفعلية (متضمنة بونص الـ MVP الجديد) وحفظها
+    player_pts = {}
+    for stat, player, _ in player_bps_scores:
+        old_pts = stat.points or 0
+        
+        # بنحسب نقط الفانتسي العادية اللي هتروح للمدربين
+        new_pts = calculate_player_points(stat, player.position)
+        
+        stat.points = new_pts
+        session.add(stat)
+        
+        player.total_points = (player.total_points or 0) - old_pts + new_pts
+        session.add(player)
+        
+        player_pts[stat.player_id] = new_pts
+
+    # 4. تجميع النقاط للفرق والمدربين
     ftgs = session.exec(select(FantasyTeamGameweek).where(FantasyTeamGameweek.gameweek_id == gameweek_id)).all()
     for ftg in ftgs:
         old_gw_pts = ftg.gameweek_points or 0
@@ -211,8 +230,7 @@ def calculate_gw_points(
         session.add(gw)
 
     session.commit()
-    return {"message": "Points recalculated perfectly using the new engine!"}
-
+    return {"message": "BPS MVP Auto-Assigned & Points recalculated perfectly!"}
 
 @router.get("/{gw_id}/stats", response_model=List[MatchStatRead])
 def get_gameweek_stats(

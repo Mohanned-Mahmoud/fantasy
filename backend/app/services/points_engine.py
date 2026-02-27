@@ -189,3 +189,44 @@ def get_points_breakdown(stat: MatchStat, position: str) -> dict:
 
     breakdown["Total"] = sum(breakdown.values())
     return breakdown
+
+def calculate_bps(stat, position: str) -> int:
+    """
+    نظام تقييم الأداء العام (BPS) لتحديد الـ MVP بشكل مستقل عن نقاط الفانتسي.
+    """
+    pos = position.upper() if position else "ATT"
+    bps = 0
+
+    # 1. دقائق اللعب (بونص صغير على التواجد)
+    if (stat.minutes_played or 0) > 0:
+        bps += 5
+
+    # 2. الأهداف (تقييم عالي جداً)
+    bps += (stat.goals or 0) * 24
+
+    # 3. الأسيست
+    bps += (stat.assists or 0) * 15
+
+    # 4. الكلين شيت (بيدي تقييم دفاعي محترم للحارس والمدافع)
+    if (stat.clean_sheet or 0) > 0:
+        if pos in ["GK", "DEF"]:
+            bps += 12
+        elif pos == "MID":
+            bps += 8
+
+    # 5. التصديات (كل تصدي بيدي تقييم للحارس، مش كل 3 تصديات زي الفانتسي)
+    bps += (stat.saves or 0) * 4 
+
+    # 6. المهارات (الكباري)
+    bps += (stat.nutmegs or 0) * 10
+
+    # 7. ضربات الجزاء
+    bps += getattr(stat, "penalties_scored", 0) * 12
+    bps += getattr(stat, "penalties_saved", 0) * 18
+    bps += getattr(stat, "penalties_missed", 0) * -10
+
+    # 8. الكوارث (خصم قاسي من التقييم)
+    bps += (stat.defensive_errors or 0) * -10
+    bps += (stat.own_goals or 0) * -15
+
+    return bps

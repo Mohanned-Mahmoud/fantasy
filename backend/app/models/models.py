@@ -51,6 +51,7 @@ class MatchStat(SQLModel, table=True):
     saves: int = Field(default=0)
     defensive_errors: int = Field(default=0)
     mvp: bool = Field(default=False)
+    mvp_rank: int = Field(default=0) # <-- السطر الجديد (1 أو 2 أو 3)
     nutmegs: int = Field(default=0)
     own_goals: int = Field(default=0)
     minutes_played: int = Field(default=0)
