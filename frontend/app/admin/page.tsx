@@ -10,16 +10,16 @@ const POSITIONS = ["GK", "DEF", "MID", "ATT"];
 
 // تم إضافة إحصائيات ضربات الجزاء هنا لتعمل مع التصميم العبقري بتاعك
 const STAT_FIELDS = [
-  { key: "goals",            label: "Goals",       shortLabel: "G",   icon: "⚽", color: "#4ade80", max: 10,  step: 1 },
-  { key: "assists",          label: "Assists",      shortLabel: "A",   icon: "🅰️", color: "#60a5fa", max: 10,  step: 1 },
-  { key: "clean_sheet",      label: "Clean Sheet",  shortLabel: "CS",  icon: "🛡️", color: "#a78bfa", max: 5,   step: 1 },
-  { key: "saves",            label: "Saves",        shortLabel: "SV",  icon: "🧤", color: "#facc15", max: 20,  step: 1 },
-  { key: "defensive_errors", label: "Def. Errors",  shortLabel: "DE",  icon: "⚠️", color: "#fb923c", max: 5,   step: 1 },
-  { key: "nutmegs",          label: "Nutmegs",      shortLabel: "NM",  icon: "🌀", color: "#f472b6", max: 10,  step: 1 },
-  { key: "own_goals",        label: "Own Goals",    shortLabel: "OG",  icon: "😬", color: "#f87171", max: 5,   step: 1 },
-  { key: "penalties_scored", label: "Pen. Scored",  shortLabel: "P.G", icon: "🎯", color: "#34d399", max: 5,   step: 1 },
-  { key: "penalties_saved",  label: "Pen. Saved",   shortLabel: "P.SV",icon: "🦸‍♂️", color: "#2dd4bf", max: 5,   step: 1 },
-  { key: "penalties_missed", label: "Pen. Missed",  shortLabel: "P.M", icon: "❌", color: "#ef4444", max: 5,   step: 1 },
+  { key: "goals",            label: "Goals",       shortLabel: "Goals",   icon: "⚽", color: "#4ade80", max: 10,  step: 1 },
+  { key: "assists",          label: "Assists",      shortLabel: "Assists",   icon: "🅰️", color: "#60a5fa", max: 10,  step: 1 },
+  { key: "clean_sheet",      label: "Clean Sheet",  shortLabel: "Clean Sheet",  icon: "🛡️", color: "#a78bfa", max: 5,   step: 1 },
+  { key: "saves",            label: "Saves",        shortLabel: "Saves",  icon: "🧤", color: "#facc15", max: 20,  step: 1 },
+  { key: "defensive_errors", label: "Def. Errors",  shortLabel: "Def. Errors",  icon: "⚠️", color: "#fb923c", max: 5,   step: 1 },
+  { key: "nutmegs",          label: "Nutmegs",      shortLabel: "Nutmegs",  icon: "🌀", color: "#f472b6", max: 10,  step: 1 },
+  { key: "own_goals",        label: "Own Goals",    shortLabel: "Own Goals",  icon: "😬", color: "#f87171", max: 5,   step: 1 },
+  { key: "penalties_scored", label: "Pen. Scored",  shortLabel: "Pen. Scored", icon: "🎯", color: "#34d399", max: 5,   step: 1 },
+  { key: "penalties_saved",  label: "Pen. Saved",   shortLabel: "Pen. Saved",icon: "🦸‍♂️", color: "#2dd4bf", max: 5,   step: 1 },
+  { key: "penalties_missed", label: "Pen. Missed",  shortLabel: "Pen. Missed", icon: "❌", color: "#ef4444", max: 5,   step: 1 },
   { key: "minutes_played",   label: "Minutes",      shortLabel: "MIN", icon: "⏱️", color: "#94a3b8", max: 120, step: 5 },
 ] as const;
 
@@ -288,7 +288,9 @@ export default function AdminPage() {
       if (nextIdx >= queuePlayers.length) setSessionDone(true);
       else setCurrentIdx(nextIdx);
     } catch (err: any) {
-      flash(err.response?.data?.detail || "Failed to save stats", true);
+      console.error("Save Stats Error:", err.response?.data || err);
+      const errorMessage = err.response?.data?.detail || err.message || "Failed to save stats";
+      flash(`Error: ${errorMessage}`, true);
     } finally {
       setSavingStat(false);
     }

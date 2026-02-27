@@ -42,6 +42,9 @@ class MatchStatCreate(BaseModel):
     nutmegs: int = 0
     own_goals: int = 0
     minutes_played: int = 120
+    penalties_scored: int = 0   # ضفنا ده
+    penalties_saved: int = 0    # وضفنا ده
+    penalties_missed: int = 0
 
 
 class MatchStatRead(BaseModel):
@@ -57,6 +60,9 @@ class MatchStatRead(BaseModel):
     own_goals: int
     minutes_played: int
     points: int
+    penalties_scored: int  # ضفنا ده
+    penalties_saved: int   # وضفنا ده
+    penalties_missed: int  # وضفنا ده
 
     class Config:
         from_attributes = True
