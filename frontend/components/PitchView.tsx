@@ -6,7 +6,7 @@ import { Player } from "@/lib/api";
 interface PitchPlayer {
   player: Player;
   isCaptain: boolean;
-  stat?: any; // دي اللي بتستقبل الإحصائيات عشان نرسم عليها الباجات
+  stat?: any;
 }
 
 interface PitchViewProps {
@@ -15,7 +15,6 @@ interface PitchViewProps {
   onCaptainToggle?: (playerId: number) => void;
 }
 
-// ألوان المراكز
 const posColors: Record<string, string> = {
   GK: "#f59e0b",
   DEF: "#3b82f6",
@@ -23,7 +22,6 @@ const posColors: Record<string, string> = {
   ATT: "#ef4444",
 };
 
-// تحديد "خطوط" الملعب لكل مركز (الارتفاع الرأسي)
 const rowVerticalPosition: Record<string, string> = {
   GK: "85%",
   DEF: "65%",
@@ -31,28 +29,37 @@ const rowVerticalPosition: Record<string, string> = {
   ATT: "18%",
 };
 
-// كود شكل الخماسي المنتظم للباجات
 const PENTAGON_CLIP = "polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%)";
 
-// الدالة اللي بتختبر الأرقام وتدي الباجات
+// تأمين الأرقام كلها بـ Number عشان متضربش لو راجعة String
 function getBadges(stat: any) {
   if (!stat) return [];
   const badges = [];
   
-  // باجات الأساطير
-  if (stat.goals >= 5) badges.push({ id: 'sniper', emoji: '🎯', title: 'Sniper (5+ Goals)', bg: '#ef4444' });
-  if (stat.assists >= 4) badges.push({ id: 'maestro', emoji: '🎩', title: 'The Maestro (4+ Assists)', bg: '#3b82f6' });
-  if (stat.saves >= 15) badges.push({ id: 'wall', emoji: '🧱', title: 'The Wall (10+ Saves)', bg: '#ea580c' });
-  if (stat.penalties_saved >= 1) badges.push({ id: 'octopus', emoji: '🐙', title: 'Penalty Killer', bg: '#9333ea' });
-  if (stat.clean_sheet >= 2) badges.push({ id: 'minister', emoji: '🛑', title: 'Minister of Defense', bg: '#475569' });
-  if (stat.mvp_rank === 1) badges.push({ id: 'goat', emoji: '👑', title: 'The GOAT (MVP 1st)', bg: '#eab308' });
-  if (stat.nutmegs >= 4) badges.push({ id: 'ankle', emoji: '🌀', title: 'Ankle Breaker (2+ Nutmegs)', bg: '#06b6d4' });
-  if (stat.matches_won >= 4) badges.push({ id: 'lucky', emoji: '🍀', title: 'Lucky Charm (4+ Wins)', bg: '#10b981' });
+  const goals = Number(stat.goals) || 0;
+  const assists = Number(stat.assists) || 0;
+  const saves = Number(stat.saves) || 0;
+  const ps = Number(stat.penalties_saved) || 0;
+  const cs = Number(stat.clean_sheet) || 0;
+  const mvp = Number(stat.mvp_rank) || 0;
+  const nutmegs = Number(stat.nutmegs) || 0;
+  const won = Number(stat.matches_won) || 0;
+  const og = Number(stat.own_goals) || 0;
+  const pm = Number(stat.penalties_missed) || 0;
+  const errors = Number(stat.defensive_errors) || 0;
+
+  if (goals >= 5) badges.push({ id: 'sniper', emoji: '🎯', title: 'Sniper (5+ Goals)', bg: '#ef4444' });
+  if (assists >= 4) badges.push({ id: 'maestro', emoji: '🎩', title: 'The Maestro (4+ Assists)', bg: '#3b82f6' });
+  if (saves >= 10) badges.push({ id: 'wall', emoji: '🧱', title: 'The Wall (10+ Saves)', bg: '#ea580c' });
+  if (ps >= 1) badges.push({ id: 'octopus', emoji: '🐙', title: 'Penalty Killer', bg: '#9333ea' });
+  if (cs >= 2) badges.push({ id: 'minister', emoji: '🛑', title: 'Minister of Defense', bg: '#475569' });
+  if (mvp === 1) badges.push({ id: 'goat', emoji: '👑', title: 'The GOAT (MVP 1st)', bg: '#eab308' });
+  if (nutmegs >= 2) badges.push({ id: 'ankle', emoji: '🌀', title: 'Ankle Breaker (2+ Nutmegs)', bg: '#06b6d4' });
+  if (won >= 4) badges.push({ id: 'lucky', emoji: '🍀', title: 'Lucky Charm (4+ Wins)', bg: '#10b981' });
   
-  // باجات السف والتحفيل
-  if (stat.own_goals > 0) badges.push({ id: 'agent', emoji: '🕵️', title: 'Double Agent (Own Goal)', bg: '#1f2937' });
-  if (stat.penalties_missed > 0) badges.push({ id: 'freeze', emoji: '📉', title: 'Brain Freeze (Missed Penalty)', bg: '#4f46e5' });
-  if (stat.defensive_errors >= 4) badges.push({ id: 'disaster', emoji: '⚠️', title: 'Walking Disaster (2+ Errors)', bg: '#b91c1c' });
+  if (og > 0) badges.push({ id: 'agent', emoji: '🕵️', title: 'Double Agent (Own Goal)', bg: '#1f2937' });
+  if (pm > 0) badges.push({ id: 'freeze', emoji: '📉', title: 'Brain Freeze (Missed Penalty)', bg: '#4f46e5' });
+  if (errors >= 2) badges.push({ id: 'disaster', emoji: '⚠️', title: 'Walking Disaster (2+ Errors)', bg: '#b91c1c' });
   
   return badges;
 }
@@ -63,7 +70,6 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
 
   function handlePlayerTouchEnd(playerId: number) {
     if (!onCaptainToggle) return;
-
     const now = Date.now();
     const isSamePlayer = lastTapPlayerIdRef.current === playerId;
     const isDoubleTap = isSamePlayer && now - lastTapTimeRef.current < 350;
@@ -74,16 +80,12 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
       lastTapPlayerIdRef.current = null;
       return;
     }
-
     lastTapTimeRef.current = now;
     lastTapPlayerIdRef.current = playerId;
   }
   
-  // دالة لتوزيع اللاعبين عرضياً بشكل متساوي
   const getDynamicPositions = (currentPlayers: PitchPlayer[]) => {
     const groups: Record<string, PitchPlayer[]> = { GK: [], DEF: [], MID: [], ATT: [] };
-    
-    // تجميع اللاعبين حسب مراكزهم
     currentPlayers.forEach(pp => {
       const pos = pp.player.position.toUpperCase();
       if (groups[pos]) groups[pos].push(pp);
@@ -91,19 +93,15 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
 
     const result: Array<PitchPlayer & { top: string; left: string; label: string }> = [];
 
-    // حساب إحداثيات كل مركز
     Object.entries(groups).forEach(([pos, pps]) => {
       const count = pps.length;
       const top = rowVerticalPosition[pos];
 
       pps.forEach((pp, index) => {
-        let left = "50%"; // الافتراضي لو لاعب واحد يكون في النص
-        
+        let left = "50%"; 
         if (count > 1) {
-          // توزيع المسافات: مثلاً لو 2 لعيبة يبقوا عند 25% و 75%
           left = `${(index + 1) * (100 / (count + 1))}%`;
         }
-
         result.push({ ...pp, top, left, label: pos });
       });
     });
@@ -118,7 +116,6 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
       className="pitch-bg relative w-full rounded-xl overflow-hidden select-none"
       style={{ paddingBottom: "140%", maxWidth: "360px", margin: "0 auto" }}
     >
-      {/* رسم خطوط الملعب */}
       <div className="absolute inset-0">
         <div className="absolute rounded-full border-2 border-white/10" style={{ top: "35%", left: "15%", width: "70%", height: "30%" }} />
         <div className="absolute border-b-2 border-white/10" style={{ top: "50%", left: "5%", right: "5%" }} />
@@ -127,7 +124,7 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
       </div>
 
       {positioned.map((pp, idx) => {
-        const badges = getBadges(pp.stat); // بنجيب باجات اللاعب ده
+        const badges = getBadges(pp.stat);
 
         return (
           <div
@@ -139,7 +136,6 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
           >
             <div className="relative">
               
-              {/* ── هنا السحر بتاع الباجات الخماسية ── */}
               {badges.length > 0 && (
                 <div className="absolute -top-4 -right-4 flex -space-x-2 z-40">
                   {badges.map((badge) => (
@@ -185,7 +181,6 @@ export default function PitchView({ players, onPlayerClick, onCaptainToggle }: P
               {pp.player.name.split(" ").pop()}
             </div>
 
-            {/* نقط اللاعب في الجولة (لو موجودة) */}
             {pp.stat && (
               <div className="text-[9px] font-black text-yellow-400 bg-black/60 px-1.5 py-0.5 rounded shadow-lg border border-yellow-400/20">
                 {pp.stat.points} pts

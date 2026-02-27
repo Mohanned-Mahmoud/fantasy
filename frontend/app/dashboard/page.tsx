@@ -29,12 +29,9 @@ export default function DashboardPage() {
   const [highlights, setHighlights] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
-  // States for controlling gameweek navigation (arrow controls)
   const [allGWs, setAllGWs] = useState<Gameweek[]>([]);
   const [availableTeamGWs, setAvailableTeamGWs] = useState<TeamGW[]>([]);
   const [currentViewIndex, setCurrentViewIndex] = useState<number>(0);
-  
-  // 🌟 إحصائيات الجولة المعروضة (عشان الباجات وفريم الـ MVP)
   const [gwStats, setGwStats] = useState<any[]>([]);
 
   useEffect(() => {
@@ -48,27 +45,29 @@ export default function DashboardPage() {
   async function loadData() {
     try {
       const [teamRes, gwRes, playersRes, historyRes, highlightsRes, allGwsRes] = await Promise.all([
-        api.get("/teams/my"),
-        api.get("/gameweeks/active"),
-        api.get("/players/"),
+        api.get("/teams/my").catch(() => ({ data: null })),
+        api.get("/gameweeks/active").catch(() => ({ data: null })),
+        api.get("/players/").catch(() => ({ data: [] })),
         api.get("/teams/my/history").catch(() => ({ data: [] })),
-        api.get("/stats/dashboard-highlights").catch(() => ({ data: { show: false } })),
+        api.get("/stats/dashboard-highlights").catch(() => ({ data: null })),
         api.get("/gameweeks/").catch(() => ({ data: [] }))
       ]);
       
       setTeam(teamRes.data);
       setActiveGW(gwRes.data);
-      setPlayers(playersRes.data);
+      setPlayers(Array.isArray(playersRes.data) ? playersRes.data : []);
       setHighlights(highlightsRes.data);
-      setAllGWs(allGwsRes.data);
+      
+      const gwsList = Array.isArray(allGwsRes.data) ? allGwsRes.data : [];
+      setAllGWs(gwsList);
 
-      const openVotingGW = allGwsRes.data.find((gw: Gameweek) => gw.is_voting_open);
+      const openVotingGW = gwsList.find((gw: Gameweek) => gw.is_voting_open);
       setVotingGW(openVotingGW || null);
 
-      let fetchedHistory = historyRes.data || [];
+      let fetchedHistory = Array.isArray(historyRes.data) ? historyRes.data : [];
       let currentTGW = null;
 
-      if (gwRes.data) {
+      if (gwRes.data?.id) {
         try {
           const tgwRes = await api.get(`/teams/my/gameweek/${gwRes.data.id}`);
           if (tgwRes.data) {
@@ -85,11 +84,12 @@ export default function DashboardPage() {
       combined.sort((a: any, b: any) => (a.gameweek_id || 0) - (b.gameweek_id || 0));
       setAvailableTeamGWs(combined);
       
+      // 🌟 رجعناها تفتح على آخر إندكس (الجولة الحالية الجديدة)
       if (combined.length > 0) {
         setCurrentViewIndex(combined.length - 1);
       }
     } catch (err) {
-      console.error(err);
+      console.error("Dashboard Load Error:", err);
     } finally {
       setLoading(false);
     }
@@ -101,8 +101,10 @@ export default function DashboardPage() {
   useEffect(() => {
     if (viewedGWInfo?.id) {
       api.get(`/gameweeks/${viewedGWInfo.id}/stats`)
-        .then(res => setGwStats(res.data))
+        .then(res => setGwStats(Array.isArray(res.data) ? res.data : []))
         .catch(() => setGwStats([]));
+    } else {
+      setGwStats([]);
     }
   }, [viewedGWInfo?.id]);
 
@@ -111,22 +113,22 @@ export default function DashboardPage() {
     const ids = [teamGW.player1_id, teamGW.player2_id, teamGW.player3_id, teamGW.player4_id, teamGW.player5_id].filter(Boolean) as number[];
     return ids.map((id) => {
       const p = players.find((pl) => pl.id === id);
-      const pStat = gwStats.find(s => s.player_id === id); 
+      // تأمين المقارنة بـ Number عشان لو الداتا راجعة بشكل مختلف
+      const pStat = gwStats.find(s => Number(s.player_id) === Number(id)); 
       return p ? { player: p, isCaptain: id === teamGW.captain_id, stat: pStat } : null;
     }).filter(Boolean) as { player: Player; isCaptain: boolean; stat?: any }[];
   }
 
   const selectedPlayers = getSelectedPlayers();
 
-  // 🌟 استخراج اللعيبة اللي كسبوا الـ MVP في الجولة دي
   const mvpPlayers = gwStats
-    .filter(stat => stat.mvp_rank > 0 && stat.mvp_rank <= 3)
-    .sort((a, b) => a.mvp_rank - b.mvp_rank)
+    .filter(stat => stat && Number(stat.mvp_rank) > 0 && Number(stat.mvp_rank) <= 3)
+    .sort((a, b) => Number(a.mvp_rank) - Number(b.mvp_rank))
     .map(stat => {
       const p = players.find(pl => pl.id === stat.player_id);
       return { stat, player: p };
     })
-    .filter(item => item.player); // نتأكد إن اللاعب موجود
+    .filter(item => item.player); 
 
   function handlePrevGW() {
     setCurrentViewIndex(prev => Math.max(0, prev - 1));
@@ -210,7 +212,7 @@ export default function DashboardPage() {
 
                 <div className="card p-4">
                   <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>BUDGET</div>
-                  <div className="text-3xl font-black text-yellow-400">£{team?.budget_remaining?.toFixed(1)}M</div>
+                  <div className="text-3xl font-black text-yellow-400">£{team?.budget_remaining?.toFixed(1) ?? "0.0"}M</div>
                 </div>
                 <div className="card p-4">
                   <div className="text-xs font-medium mb-1" style={{ color: "var(--muted)" }}>FREE TRANSFERS</div>
@@ -245,7 +247,6 @@ export default function DashboardPage() {
                   <PitchView players={selectedPlayers} />
                 </div>
 
-                {/* ── 🌟 فريم الـ MVP الجديد ── */}
                 {mvpPlayers.length > 0 && (
                   <div className="card p-5 border border-yellow-500/20 shadow-[0_0_20px_rgba(250,204,21,0.05)]">
                     <h3 className="font-black mb-4 flex items-center justify-center gap-2 text-lg text-center">
@@ -256,12 +257,12 @@ export default function DashboardPage() {
                     <div className="grid grid-cols-3 gap-3 md:gap-4">
                       {mvpPlayers.map((item) => {
                         const rank = Number(item.stat.mvp_rank);
-                        const configMapping: Record<number, { medal: string, color: string, bg: string, label: string }> = {
-                          1: { medal: "🥇", color: "#facc15", bg: "rgba(250,204,21,0.1)", label: "1ST" },
-                          2: { medal: "🥈", color: "#94a3b8", bg: "rgba(148,163,184,0.1)", label: "2ND" },
-                          3: { medal: "🥉", color: "#fb923c", bg: "rgba(251,146,60,0.1)", label: "3RD" },
+                        const configMapping: Record<number, any> = {
+                          1: { medal: "🥇", color: "#facc15", bg: "rgba(250,204,21,0.1)" },
+                          2: { medal: "🥈", color: "#94a3b8", bg: "rgba(148,163,184,0.1)" },
+                          3: { medal: "🥉", color: "#fb923c", bg: "rgba(251,146,60,0.1)" },
                         };
-                        const config = configMapping[rank] || configMapping[3]; // Fallback للحماية
+                        const config = configMapping[rank] || configMapping[3];
 
                         return (
                           <div 
@@ -283,7 +284,6 @@ export default function DashboardPage() {
                               {item.stat.points} pts
                             </div>
 
-                            {/* تأثير إضاءة خفيف في الخلفية */}
                             <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ background: `radial-gradient(circle at center, ${config.color} 0%, transparent 70%)` }} />
                           </div>
                         );
@@ -293,10 +293,8 @@ export default function DashboardPage() {
                 )}
               </div>
 
-              {/* ── HIGHLIGHTS WIDGETS ── */}
               {highlights?.show && (
                 <div className="grid md:grid-cols-2 gap-6 mt-2 md:col-span-3">
-                  
                   {highlights.top_owned?.length > 0 && (
                     <div className="card p-4">
                       <h3 className="font-bold mb-3 flex items-center gap-2">🔥 Most Owned</h3>
@@ -342,10 +340,8 @@ export default function DashboardPage() {
                       </div>
                     </div>
                   )}
-                  
                 </div>
               )}
-
             </div>
           )}
         </div>
